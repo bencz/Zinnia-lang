@@ -1,0 +1,34 @@
+namespace System
+	public static class Memory
+		public static extern cdecl asmname("_malloc")   void* Allocate(uint_ptr Size)
+		public static extern cdecl asmname("_free")	 	void Free(void* MemBlock)
+		public static extern cdecl asmname("_realloc")  void* ReAllocate(void* MemBlock, uint_ptr NewSize)
+		public static extern cdecl asmname("__expand")  void* Expand(void* MemBlock, uint_ptr NewSize)
+		public static extern cdecl asmname("_memcpy")   void Copy(void* Dst, Src, uint_ptr Size)
+		public static extern cdecl asmname("_memset")   void Set(void* Dst, int Value, uint_ptr Size)
+		
+		public static void* Allocate(int Size)
+			return Allocate(Size to uint_ptr)
+			
+		public static void* ReAllocate(void* MemBlock, int NewSize)
+			return ReAllocate(MemBlock, NewSize to uint_ptr)
+			
+		public static void* Expand(void* MemBlock, int NewSize)
+			return Expand(MemBlock, NewSize to uint_ptr)
+			
+		public static void Copy(void* Dst, Src, int Size)
+			Copy Dst, Src, Size to uint_ptr
+			
+		public static void Set(void* Dst, int Value, int Size)
+			Set Dst, Value, Size to uint_ptr
+		
+		public static void Zero(void* Dst, int Size)
+			Set Dst, 0, Size
+			
+		public static void Zero(void* Dst, uint_ptr Size)
+			Set Dst, 0, Size
+			
+		public static void* Allocate(void* InitValue, uint_ptr Size)
+			var Ret = Allocate(Size)
+			Copy Ret, InitValue, Size
+			return Ret

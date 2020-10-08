@@ -1,0 +1,1046 @@
+using System
+
+namespace Internals.Reflection
+	public alias ASSEMBLY_PTR = Assembly*
+	public alias IDENTIFIER_PTR = void*
+	public alias UNDECLARED_ID_PTR = (ASSEMBLY_PTR Assembly, void* Ptr)
+
+	public enum CallingConvention : byte
+		Unknown
+		StdCall
+		CDecl
+		AsCall
+	
+	public enum DeclaredIdType : byte
+		Unknown
+		Alias
+		Class
+		Struct
+		Enum
+		Flag
+		Function
+		Constructor
+		Destructor
+		Variable
+		Constant
+		Property
+		Namespace
+
+	public enum UndeclaredIdType : byte
+		Unknown
+		Pointer
+		Reference
+		Tuple
+		Function
+		NonrefArrayType
+		RefArrayType
+        PointerAndLength
+		NonstaticFunctionType
+
+		SByte
+		Int16
+		Int32
+		Int64
+
+		Byte
+		UInt16
+		UInt32
+		UInt64
+
+        IntPtr
+        UIntPtr
+
+		Single
+		Double
+
+		Boolean
+		Object
+		String
+		Char
+
+		Void
+		Type
+		Auto
+		Null
+		Namespace
+		
+	public flag ReadDeclaredIdFlags : byte
+		All = 0
+		OnlyReadIdData = 1
+		DontReadMembers = 2
+		DontReadFreeable = 4
+
+	public flag IdentifierAccess : byte
+		Public = 0
+		Protected = 1
+		Private = 2
+		Internal = 4
+		InternalProtected = Internal | Protected
+		Unknown = Internal | Private
+		
+	public flag IdentifierFlags : ushort
+		None = 0
+		Virtual = 1
+		Override = 2
+		Abstract = 4
+		Sealed = 8
+		Static = 16
+		Extern = 32
+		ReadOnly = 64
+		SpecialName = 128
+		All = Virtual | Override | Abstract | Sealed | Static | Extern | ReadOnly | SpecialName
+
+		// AssemblyDesc: 16384, 32768
+		
+	public flag ParameterFlags : byte
+		None = 0
+		ParamArray = 1
+		
+	public enum ReferenceMode : byte
+		Unsafe
+		IdMustBeAssigned
+		IdGetsAssigned
+		
+	public struct TupleMemberData
+		public ReflectionString Name
+		public UNDECLARED_ID_PTR UndeclaredType
+		public int Offset
+	
+	public struct ParameterData
+		public ParameterFlags Flags
+		public ReflectionString Name
+		public UNDECLARED_ID_PTR UndeclaredType
+		public ConstValue InitValue
+		
+		public void Free()
+			InitValue.Free
+		
+	public struct UndeclaredIdData
+		public UndeclaredIdType Type
+		public IDENTIFIER_PTR DeclaredId
+		public UNDECLARED_ID_PTR BaseUndeclaredId
+		public int RefArrayDimensions
+		public int[*] NonrefArrayLengths
+		public ReferenceMode ReferenceMode
+		public int TupleSize
+		public int TupleAlign
+		public bool TupleNamed
+		public TupleMemberData[*] TupleMembers
+		public CallingConvention CallConv
+		public ParameterData[*] Parameters
+		
+		public void Free()
+			if NonrefArrayLengths.Pointer != null
+				Memory.Free NonrefArrayLengths
+				NonrefArrayLengths = default
+				
+			if TupleMembers.Pointer != null
+				Memory.Free TupleMembers
+				TupleMembers = default
+		
+			if Parameters.Pointer != null
+				for var i in 0 .. Parameters.Length
+					Parameters[i].Free
+			
+				Memory.Free Parameters
+				Parameters = default
+				
+	public struct EnumValueData
+		public ReflectionString Name
+		public ConstValue Value
+		
+		public void Free()
+			Value.Free
+				
+	public struct DeclaredIdData
+		public IDENTIFIER_PTR Identifier
+		public ASSEMBLY_PTR Assembly
+		public IDENTIFIER_PTR Parent
+		public DeclaredIdType Type
+		public IdentifierAccess Access
+		public IdentifierFlags Flags
+		public ReflectionString Name
+		
+		public UNDECLARED_ID_PTR BaseUndeclaredId
+		public int StructuredSize
+		public int StructuredAlign
+		public IDENTIFIER_PTR[*] Children
+		public void* FunctionTable
+		public IDENTIFIER_PTR[*] Members
+		public EnumValueData[*] EnumValues
+		public int OverloadIndex
+		public int VirtualIndex
+		public IDENTIFIER_PTR OverriddenId
+		public void* Address
+		public int MemberOffset
+		public ConstValue ConstValue
+		public ParameterData[*] PropertyParameters
+		public IDENTIFIER_PTR PropertyGetter
+		public IDENTIFIER_PTR PropertySetter
+		
+		public void Free()
+			if Children.Pointer != null
+				Memory.Free Children
+				Children = default
+				
+			if Members.Pointer != null
+				Memory.Free Members
+				Members = default
+		
+			if EnumValues.Pointer != null
+				for var i in 0 .. EnumValues.Length
+					EnumValues[i].Free
+			
+				Memory.Free EnumValues
+				EnumValues = default
+				
+			if PropertyParameters.Pointer != null
+				Memory.Free PropertyParameters
+				PropertyParameters = default
+				
+	public struct ReflectionString
+		public uint_ptr Length
+		public byte* Pointer
+		
+		public bool IsValid:
+			get return Pointer != null
+		
+		public override string ToString()
+			var Ptr = Pointer
+			var Ret = new string(checked Length to int)
+			for var i in 0 .. Length
+				Ret.m_Chars[i] = LEB128Helper.DecodeInt(ref Ptr) to char
+				
+			return Ret
+		
+	public struct Assembly
+		public AssemblyData* Data
+		public void** GlobalPointers
+		
+	public struct AssemblyData
+		public ASSEMBLY_PTR Parent
+		public ReflectionString Name
+		public ReferencedAssembly[*] Assemblies
+		public ReferencedId[*] ReferencedIds
+		public (static void -> void) AssemblyEntry
+		public bool AssemblyEntryCalled
+		
+		public void Free()
+			Memory.Free Assemblies
+			Assemblies = default
+			
+			Memory.Free ReferencedIds
+			ReferencedIds = default
+		
+	public struct ReferencedId
+		public IDENTIFIER_PTR Identifier
+		
+	public struct ReferencedAssembly
+		public ASSEMBLY_PTR Assembly
+		
+	public enum ConstValueType : byte
+		Unknown
+		Integer
+		Float
+		Double
+		String
+		Char
+		Boolean
+		Zero
+		Structure
+		Null
+		
+	public struct ConstValue
+		public ConstValueType Type
+		public void* Value
+		public ConstValue[*] Members
+		
+		public void Free()
+			if Members.Pointer != null
+				for var i in 0 .. Members.Length
+					Members[i].Free
+					
+				Memory.Free Members
+				Members = default
+		
+	public static class Reflection
+		public extern static ASSEMBLY_PTR EntryAssembly
+		
+		static UNDECLARED_ID_PTR GetAliasBase(UNDECLARED_ID_PTR Id)
+			var UndeclaredPtr = Id.Ptr to byte*
+			var Type = *(UndeclaredPtr to UndeclaredIdType*)
+			UndeclaredPtr += sizeof(UndeclaredIdType)
+			
+			if Type != UndeclaredIdType.Unknown
+				return null, null
+			
+			var DeclaredId = ReadDeclaredReference(Id.Assembly, ref UndeclaredPtr)
+			if GetDeclaredIdType(DeclaredId) != DeclaredIdType.Alias: return null, null
+			
+			var DeclaredData = ReadDeclaredId(DeclaredId, ReadDeclaredIdFlags.DontReadFreeable)
+			return DeclaredData.BaseUndeclaredId
+				
+		public static UNDECLARED_ID_PTR GetRealId(UNDECLARED_ID_PTR Id)
+			cycle
+				var NewId = GetAliasBase(Id)
+				if NewId.Ptr == null: break
+				Id = NewId
+				
+			return Id
+			
+		static bool IsEquivalentHelper(UNDECLARED_ID_PTR Undecl, IDENTIFIER_PTR Decl)
+			Undecl = GetRealId(Undecl)
+			
+			var UndeclData = ReadUndeclaredId(Undecl)
+			var Ret = GetDeclaredEquivalent(UndeclData.Type) == Decl
+			UndeclData.Free
+			return Ret
+			
+		public static IDENTIFIER_PTR GetDeclaredEquivalent(UndeclaredIdType Undecl)
+			if Undecl == UndeclaredIdType.SByte: return id_desc_ptr(SByte)
+			if Undecl == UndeclaredIdType.Int16: return id_desc_ptr(Int16)
+			if Undecl == UndeclaredIdType.Int32: return id_desc_ptr(Int32)
+			if Undecl == UndeclaredIdType.Int64: return id_desc_ptr(Int64)
+			
+			if Undecl == UndeclaredIdType.Byte: return id_desc_ptr(Byte)
+			if Undecl == UndeclaredIdType.UInt16: return id_desc_ptr(UInt16)
+			if Undecl == UndeclaredIdType.UInt32: return id_desc_ptr(UInt32)
+			if Undecl == UndeclaredIdType.UInt64: return id_desc_ptr(UInt64)
+			
+			if Undecl == UndeclaredIdType.Single: return id_desc_ptr(Single)
+			if Undecl == UndeclaredIdType.Double: return id_desc_ptr(Double)
+			
+			if Undecl == UndeclaredIdType.Boolean: return id_desc_ptr(Boolean)
+			if Undecl == UndeclaredIdType.Object: return id_desc_ptr(Object)
+			if Undecl == UndeclaredIdType.String: return id_desc_ptr(String)
+			if Undecl == UndeclaredIdType.Char: return id_desc_ptr(Char)
+			
+			if Undecl == UndeclaredIdType.Void: return id_desc_ptr(Void)
+			return null
+			
+		static bool IsEquivalentHelper(ref UndeclaredIdData A, B)
+			if A.Type == UndeclaredIdType.Unknown xor B.Type == UndeclaredIdType.Unknown
+				IDENTIFIER_PTR Decl
+				UndeclaredIdType Undecl
+				
+				if A.Type == UndeclaredIdType.Unknown
+					Decl = A.DeclaredId
+					Undecl = B.Type
+				else
+					Decl = B.DeclaredId
+					Undecl = A.Type
+				
+				return GetDeclaredEquivalent(Undecl) == Decl
+				
+			if A.Type != B.Type
+				return false
+				
+			if A.Type == UndeclaredIdType.Unknown
+				if A.DeclaredId != B.DeclaredId: return false
+			
+			else if A.Type == UndeclaredIdType.RefArrayType
+				if A.RefArrayDimensions != B.RefArrayDimensions: return false
+				if not IsEquivalent(A.BaseUndeclaredId, B.BaseUndeclaredId)
+					return false
+					
+			else if A.Type == UndeclaredIdType.NonrefArrayType
+				if A.NonrefArrayLengths.Length != B.NonrefArrayLengths.Length
+					return false
+					
+				if not IsEquivalent(A.BaseUndeclaredId, B.BaseUndeclaredId)
+					return false
+				
+				for var i in 0 .. A.NonrefArrayLengths.Length
+					if A.NonrefArrayLengths[i] != B.NonrefArrayLengths[i]
+						return false
+						
+			else if A.Type == UndeclaredIdType.Pointer
+				if not IsEquivalent(A.BaseUndeclaredId, B.BaseUndeclaredId)
+					return false
+				
+			else if A.Type == UndeclaredIdType.Reference
+				if A.ReferenceMode != B.ReferenceMode: return false
+				if not IsEquivalent(A.BaseUndeclaredId, B.BaseUndeclaredId)
+					return false
+					
+			else if A.Type == UndeclaredIdType.Tuple
+				if A.TupleSize != B.TupleSize: return false
+				if A.TupleAlign != B.TupleAlign: return false
+				if A.TupleMembers.Length != B.TupleMembers.Length
+					return false
+				
+				for var i in 0 .. A.TupleMembers.Length
+					var AMember = A.TupleMembers[i].UndeclaredType
+					var BMember = B.TupleMembers[i].UndeclaredType
+					if not IsEquivalent(AMember, BMember): return false
+				
+			else if A.Type == UndeclaredIdType.PointerAndLength
+				if not IsEquivalent(A.BaseUndeclaredId, B.BaseUndeclaredId)
+					return false
+				
+			else if A.Type == UndeclaredIdType.NonstaticFunctionType
+				if not IsEquivalent(A.BaseUndeclaredId, B.BaseUndeclaredId)
+					return false
+				
+			else if A.Type == UndeclaredIdType.Function
+				if A.CallConv != B.CallConv: return false
+				if not IsEquivalent(A.BaseUndeclaredId, B.BaseUndeclaredId)
+					return false
+					
+				if A.Parameters.Length != B.Parameters.Length: return false
+				for var i in 0 .. A.Parameters.Length
+					var AParam = A.Parameters[i].UndeclaredType
+					var BParam = A.Parameters[i].UndeclaredType
+					if not IsEquivalent(AParam, BParam): return false
+					
+			return true
+		
+		public static bool IsEquivalent(UNDECLARED_ID_PTR A, IDENTIFIER_PTR B)
+			var BData = ReadDeclaredId(B, ReadDeclaredIdFlags.DontReadFreeable)
+			if BData.Type == DeclaredIdType.Alias
+				var Ret = IsEquivalent(A, BData.BaseUndeclaredId)
+				BData.Free
+				return Ret
+			
+			var AData = ReadUndeclaredId(A)
+			if GetDeclaredEquivalent(AData.Type) == B
+				AData.Free
+				BData.Free
+				return true
+			
+			BData.Free
+			if AData.Type == UndeclaredIdType.Unknown
+				var Ret = IsEquivalent(AData.DeclaredId, B)
+				AData.Free
+				return Ret
+				
+			return false
+			
+		public static bool IsEquivalent(UNDECLARED_ID_PTR A, B)
+			A = GetRealId(A)
+			B = GetRealId(B)
+			if A.Ptr == B.Ptr
+				return true
+			
+			var AData = ReadUndeclaredId(A)
+			var BData = ReadUndeclaredId(B)
+			var Ret = IsEquivalentHelper(ref AData, ref BData)
+			AData.Free
+			BData.Free
+			return Ret
+		
+		public static bool IsEquivalent(IDENTIFIER_PTR A, B)
+			if A == B: return true
+			
+			var AData = ReadDeclaredId(A)
+			var BData = ReadDeclaredId(B)
+			var Ret = IsEquivalentHelper(ref AData, ref BData)
+			AData.Free
+			BData.Free
+			return Ret
+		
+		static bool IsEquivalentHelper(ref DeclaredIdData A, B)
+			if A.Type == DeclaredIdType.Alias and B.Type == DeclaredIdType.Alias
+				return IsEquivalent(A.BaseUndeclaredId, B.BaseUndeclaredId)
+			else if A.Type == DeclaredIdType.Alias or B.Type == DeclaredIdType.Alias
+				IDENTIFIER_PTR Decl
+				UNDECLARED_ID_PTR Undecl
+				
+				if A.Type == DeclaredIdType.Alias
+					Decl = B.Identifier
+					Undecl = A.BaseUndeclaredId
+				else
+					Decl = A.Identifier
+					Undecl = B.BaseUndeclaredId
+					
+				return IsEquivalentHelper(Undecl, Decl)
+			else
+				return A.Identifier == B.Identifier
+				
+		static ConstValue ReadConstValue(ref byte* Ptr)
+			var Ret = new ConstValue()
+			var T = *(Ptr to ConstValueType*)
+			Ptr += sizeof(ConstValueType)
+			Ret.Value = Ptr
+			
+			if T == ConstValueType.Structure
+				Ret.Members.Length = LEB128Helper.DecodeUInt(ref Ptr)
+				var Size = Ret.Members.Length * sizeof(ConstValue)
+				Ret.Members.Pointer = Memory.Allocate(Size) to ConstValue*
+				
+				for var i in 0 .. Ret.Members.Length
+					Ret.Members[i] = ReadConstValue(ref Ptr)
+			
+			else if T == ConstValueType.Integer: LEB128Helper.DecodeInt ref Ptr
+			else if T == ConstValueType.Double: Ptr += sizeof(double)
+			else if T == ConstValueType.Float: Ptr += sizeof(float)
+			else if T == ConstValueType.Boolean: Ptr += sizeof(bool)
+			else if T == ConstValueType.Char: Ptr += sizeof(char)
+			else if T == ConstValueType.String: SkipString ref Ptr
+			else if T != ConstValueType.Zero and T != ConstValueType.Null
+				T = ConstValueType.Unknown
+				
+			Ret.Type = T
+			return Ret
+		
+		static void SkipConstValue(ref byte* Ptr)
+			var T = *(Ptr to ConstValueType*)
+			Ptr += sizeof(ConstValueType)
+			
+			if T == ConstValueType.Structure
+				var Count = LEB128Helper.DecodeInt(ref Ptr)
+				for var i in 0 .. Count: SkipConstValue ref Ptr
+			else
+				if T == ConstValueType.Integer: LEB128Helper.DecodeInt ref Ptr
+				else if T == ConstValueType.Double: Ptr += sizeof(double)
+				else if T == ConstValueType.Float: Ptr += sizeof(float)
+				else if T == ConstValueType.Boolean: Ptr += sizeof(bool)
+				else if T == ConstValueType.Char: Ptr += sizeof(char)
+				else if T == ConstValueType.String: SkipString ref Ptr
+			
+		static ReflectionString ReadString(byte* Ptr)
+			var Length = LEB128Helper.DecodeUInt(ref Ptr)
+			return new: Length = Length, Pointer = Ptr
+			
+		static ReflectionString ReadString(ref byte* Ptr)
+			var Length = LEB128Helper.DecodeUInt(ref Ptr)
+			var Ret = new ReflectionString():
+				Length = Length
+				Pointer = Ptr
+				
+			while Length > 0
+				if *Ptr & $80 == 0
+					Length--
+					
+				Ptr++
+				
+			return Ret
+				
+		static void SkipString(ref byte* Ptr)
+			var Length = LEB128Helper.DecodeUInt(ref Ptr)
+			
+			while Length > 0
+				if *Ptr & $80 == 0
+					Length--
+					
+				Ptr++
+	
+		static void ReadIdReferences(AssemblyData* Data, ref byte* Ptr)
+			Data->ReferencedIds.Length = LEB128Helper.DecodeUInt(ref Ptr)
+			var Size = Data->ReferencedIds.Length * sizeof(ReferencedId)
+			Data->ReferencedIds.Pointer = Memory.Allocate(Size) to ReferencedId*
+			
+			for var i in 0 .. Data->ReferencedIds.Length
+				var AssemblyIndex = LEB128Helper.DecodeInt(ref Ptr)
+				var Position = LEB128Helper.DecodeLong(ref Ptr)
+				
+				ASSEMBLY_PTR Assembly
+				if AssemblyIndex == -1: Assembly = Data->Parent
+				else Assembly = Data->Assemblies[AssemblyIndex].Assembly
+				
+				var aPtr = (Assembly to byte*) + sizeof(Internals.Reflection.Assembly) + Position
+				Data->ReferencedIds[i].Identifier = aPtr to ASSEMBLY_PTR
+				
+		static void ReadAssemblyReferences(AssemblyData* Data, ref byte* Ptr)
+			Data->Assemblies.Length = LEB128Helper.DecodeUInt(ref Ptr)
+			var Size = Data->Assemblies.Length * sizeof(ReferencedAssembly)
+			Data->Assemblies.Pointer = Memory.Allocate(Size) to ReferencedAssembly*
+	
+			var GlobalPointers = Data->Parent->GlobalPointers
+			for var i in 0 .. Data->Assemblies.Length
+				SkipString ref Ptr
+				Ptr += sizeof(int)
+				var GlobalPtr = LEB128Helper.DecodeInt(ref Ptr)
+				var Assembly = GlobalPointers[GlobalPtr]
+				Data->Assemblies[i].Assembly = Assembly to ASSEMBLY_PTR
+			
+		static void CreateAssemblyData(ASSEMBLY_PTR Assembly)
+			var Data = Assembly->Data
+			Data->Parent = Assembly
+			
+			var Ptr = (Assembly to byte*) + sizeof(Internals.Reflection.Assembly)
+			var IdRefsPtr = Ptr + *(Ptr to long*)
+			Ptr += sizeof(long)
+			
+			Data->Name = ReadString(ref Ptr)
+			SkipString ref Ptr
+			Ptr += sizeof(int)
+			
+			var Index = LEB128Helper.DecodeInt(ref Ptr)
+			if Index != -1
+				Data->AssemblyEntry = Assembly->GlobalPointers[Index] to (static void -> void)
+			else Data->AssemblyEntry = null
+				
+			ReadAssemblyReferences Data, ref Ptr
+			ReadIdReferences Data, ref IdRefsPtr
+			
+		static void Initialize(ASSEMBLY_PTR Assembly)
+			var Data = Assembly->Data
+			if Data->Parent == null
+				CreateAssemblyData Assembly
+				
+			for var i in 0 .. Data->Assemblies.Length
+				Initialize Data->Assemblies[i].Assembly
+			
+		static void Uninitialize(ASSEMBLY_PTR Assembly)
+			var Data = Assembly->Data
+			if Data->Parent == null: return
+			
+			for var i in 0 .. Data->Assemblies.Length
+				Uninitialize Data->Assemblies[i].Assembly
+				
+			Assembly->Data->Free
+			Assembly->Data->Parent = null
+				
+		public static void Initialize()
+			Initialize EntryAssembly
+			
+		public static void Uninitialize()
+			Uninitialize EntryAssembly
+			
+		static IDENTIFIER_PTR ReadDeclaredReference(ASSEMBLY_PTR Assembly, ref byte* Ptr)
+			var Index = LEB128Helper.DecodeInt(ref Ptr)
+			if Index == -1: return null
+			
+			return Assembly->Data->ReferencedIds[Index].Identifier
+			
+		static void SkipUndeclaredId(ref byte* Ptr)
+			var Type = *(Ptr to UndeclaredIdType*)
+			Ptr += sizeof(UndeclaredIdType)
+			
+			if Type == UndeclaredIdType.Unknown
+				LEB128Helper.Skip ref Ptr
+				
+			else if Type == UndeclaredIdType.RefArrayType
+				SkipUndeclaredId ref Ptr
+				LEB128Helper.Skip ref Ptr
+				
+			else if Type == UndeclaredIdType.NonrefArrayType
+				SkipUndeclaredId ref Ptr
+				var ArrayDimensions = LEB128Helper.DecodeInt(ref Ptr)
+				
+				for var i in 0 .. ArrayDimensions
+					LEB128Helper.Skip ref Ptr
+				
+			else if Type == UndeclaredIdType.Pointer
+				SkipUndeclaredId ref Ptr
+			
+			else if Type == UndeclaredIdType.Reference
+				Ptr += sizeof(ReferenceMode)
+				SkipUndeclaredId ref Ptr
+				
+			else if Type == UndeclaredIdType.Tuple
+				LEB128Helper.Skip ref Ptr
+				LEB128Helper.Skip ref Ptr
+				
+				var Named = *(Ptr to bool*)
+				Ptr++
+				
+				var MemberCount = LEB128Helper.DecodeInt(ref Ptr)
+				for var i in 0 .. MemberCount
+					if Named: SkipString ref Ptr
+					SkipUndeclaredId ref Ptr
+					LEB128Helper.Skip ref Ptr
+					
+			else if Type == UndeclaredIdType.PointerAndLength
+				SkipUndeclaredId ref Ptr
+			
+			else if Type == UndeclaredIdType.NonstaticFunctionType
+				SkipUndeclaredId ref Ptr
+			
+			else if Type == UndeclaredIdType.Function
+				Ptr += sizeof(CallingConvention)
+				SkipUndeclaredId ref Ptr
+				SkipParameters ref Ptr
+		
+		public static UndeclaredIdData ReadUndeclaredId(UNDECLARED_ID_PTR Ptr)
+			return ReadUndeclaredId(Ptr.Assembly, ref (Ptr.Ptr to byte*))
+		
+		static UndeclaredIdData ReadUndeclaredId(ASSEMBLY_PTR Assembly, ref byte* Ptr)
+			var Ret = new UndeclaredIdData()
+			Ret.Type = *(Ptr to UndeclaredIdType*)
+			Ptr += sizeof(UndeclaredIdType)
+			
+			if Ret.Type == UndeclaredIdType.Unknown
+				Ret.DeclaredId = ReadDeclaredReference(Assembly, ref Ptr)
+				
+			else if Ret.Type == UndeclaredIdType.RefArrayType
+				Ret.BaseUndeclaredId = Assembly, (Ptr to void*)
+				SkipUndeclaredId ref Ptr
+				Ret.RefArrayDimensions = LEB128Helper.DecodeInt(ref Ptr)
+				
+			else if Ret.Type == UndeclaredIdType.NonrefArrayType
+				Ret.BaseUndeclaredId = Assembly, (Ptr to void*)
+				SkipUndeclaredId ref Ptr
+				Ret.NonrefArrayLengths.Length = LEB128Helper.DecodeUInt(ref Ptr)
+				
+				var Size = Ret.NonrefArrayLengths.Length * sizeof(int)
+				Ret.NonrefArrayLengths.Pointer = Memory.Allocate(Size) to int*
+				for var i in 0 .. Ret.NonrefArrayLengths.Length
+					Ret.NonrefArrayLengths[i] = LEB128Helper.DecodeInt(ref Ptr)
+				
+			else if Ret.Type == UndeclaredIdType.Pointer
+				Ret.BaseUndeclaredId = Assembly, (Ptr to void*)
+				SkipUndeclaredId ref Ptr
+			
+			else if Ret.Type == UndeclaredIdType.Reference
+				Ret.ReferenceMode = *(Ptr to ReferenceMode*)
+				Ptr += sizeof(ReferenceMode)
+				Ret.BaseUndeclaredId = Assembly, (Ptr to void*)
+				SkipUndeclaredId ref Ptr
+				
+			else if Ret.Type == UndeclaredIdType.Tuple
+				Ret.TupleSize = LEB128Helper.DecodeInt(ref Ptr)
+				Ret.TupleAlign = LEB128Helper.DecodeInt(ref Ptr)
+				Ret.TupleNamed = *(Ptr to bool*)
+				Ptr++
+				
+				Ret.TupleMembers.Length = LEB128Helper.DecodeUInt(ref Ptr)
+				if Ret.TupleMembers.Length > 0
+					var Size = Ret.TupleMembers.Length * sizeof(TupleMemberData)
+					var Members = Memory.Allocate(Size) to TupleMemberData*
+					Ret.TupleMembers.Pointer = Members
+					
+					for var i in 0 .. Ret.TupleMembers.Length
+						if Ret.TupleNamed
+							Members[i].Name = ReadString(ref Ptr)
+							
+						Members[i].UndeclaredType = Assembly, (Ptr to void*)
+						SkipUndeclaredId ref Ptr
+						Members[i].Offset = LEB128Helper.DecodeInt(ref Ptr)
+						
+			else if Ret.Type == UndeclaredIdType.PointerAndLength
+				Ret.BaseUndeclaredId = Assembly, (Ptr to void*)
+				SkipUndeclaredId ref Ptr
+			
+			else if Ret.Type == UndeclaredIdType.NonstaticFunctionType
+				Ret.BaseUndeclaredId = Assembly, (Ptr to void*)
+				SkipUndeclaredId ref Ptr
+			
+			else if Ret.Type == UndeclaredIdType.Function
+				Ret.CallConv = *(Ptr to CallingConvention*)
+				Ptr += sizeof(CallingConvention)
+				Ret.BaseUndeclaredId = Assembly, (Ptr to void*)
+				SkipUndeclaredId ref Ptr
+				ReadParameters Assembly, ref Ptr, ref Ret.Parameters
+
+			return Ret
+			
+		static void ReadParameters(Assembly* Assembly, ref byte* Ptr, ref ParameterData[*] Parameters)
+			Parameters.Length = LEB128Helper.DecodeUInt(ref Ptr)
+			var RequiredParams = LEB128Helper.DecodeInt(ref Ptr)
+			
+			if Parameters.Length == 0
+				Parameters = default
+				return
+				
+			var Size = Parameters.Length * sizeof(ParameterData)
+			Parameters.Pointer = Memory.Allocate(Size) to ParameterData*
+			
+			for var i in 0 .. Parameters.Length
+				Parameters[i].Flags = *Ptr to ParameterFlags
+				Ptr++
+				
+				Parameters[i].Name = ReadString(ref Ptr)
+				Parameters[i].UndeclaredType = Assembly, (Ptr to void*)
+				SkipUndeclaredId ref Ptr
+				
+				if i >= RequiredParams
+					Parameters[i].InitValue = ReadConstValue(ref Ptr)
+				else Parameters[i].InitValue = new ConstValue()
+					
+		static void SkipParameters(ref byte* Ptr)
+			var ParameterCount = LEB128Helper.DecodeInt(ref Ptr)
+			var RequiredParams = LEB128Helper.DecodeInt(ref Ptr)
+			
+			for var i in 0 .. ParameterCount
+				Ptr++
+				SkipString ref Ptr
+				SkipUndeclaredId ref Ptr
+				
+				if i >= RequiredParams
+					SkipConstValue ref Ptr
+		
+		static void ReadIdentifiers(ref byte* Ptr, ref IDENTIFIER_PTR[*] List)
+			List.Length = LEB128Helper.DecodeUInt(ref Ptr)
+			
+			if List.Length == 0
+				List = default
+				return
+			
+			var Size = List.Length * sizeof(IDENTIFIER_PTR)
+			List.Pointer = Memory.Allocate(Size) to IDENTIFIER_PTR*
+			
+			for var i in 0 .. List.Length
+				List[i] = Ptr
+				SkipDeclaredId ref Ptr
+				
+		static void SkipIdentifiers(ref byte* Ptr)
+			var Count = LEB128Helper.DecodeInt(ref Ptr)
+			for var i in 0 .. Count
+				SkipDeclaredId ref Ptr
+			
+		static bool IsInsideStructure(IDENTIFIER_PTR Id)
+			var Ptr = Id to byte*
+			var DescPosition = LEB128Helper.DecodeLong(ref Ptr)
+			var Assembly = (Id to byte*) - DescPosition - 2 * sizeof(void*) to ASSEMBLY_PTR
+			var Parent = ReadDeclaredReference(Assembly, ref Ptr)
+			var Type = *Ptr & 15 to DeclaredIdType
+			
+			if Type == DeclaredIdType.Class or Type == DeclaredIdType.Struct
+				return true
+				
+			if Type == DeclaredIdType.Property
+				return IsInsideStructure(Parent)
+				
+			return false
+			
+		static bool IsGlobal(ref DeclaredIdData Data)
+			if Data.Flags & IdentifierFlags.Static != 0
+				return true
+				
+			return not IsInsideStructure(Data.Parent)
+			
+		static void SkipDeclaredId(ref byte* Ptr)
+			var Type = GetDeclaredIdType(ref Ptr)
+			var FlagData = *(Ptr to ushort*)
+			var HasOverloads = FlagData & 32768 != 0
+			var Flags = (FlagData to IdentifierFlags) & IdentifierFlags.All
+			Ptr += 2
+			
+			if FlagData & 16384 != 0: SkipString ref Ptr
+			
+			if Flags & IdentifierFlags.SpecialName != 0
+				SkipString ref Ptr
+				
+			if Type == DeclaredIdType.Alias
+				SkipUndeclaredId ref Ptr
+			
+			else if Type == DeclaredIdType.Class or Type == DeclaredIdType.Struct
+				LEB128Helper.Skip ref Ptr
+				LEB128Helper.Skip ref Ptr
+				if *(Ptr to bool*): Ptr += 16 // GUID
+				Ptr += sizeof(bool)
+				
+				var ChildCount = LEB128Helper.DecodeInt(ref Ptr)
+				for var i in 0 .. ChildCount
+					LEB128Helper.Skip ref Ptr
+					
+				LEB128Helper.Skip ref Ptr
+				SkipIdentifiers ref Ptr
+					
+			else if Type == DeclaredIdType.Enum or Type == DeclaredIdType.Flag
+				SkipUndeclaredId ref Ptr
+				
+				var MemberCount = LEB128Helper.DecodeInt(ref Ptr)
+				for var i in 0 .. MemberCount
+					SkipString ref Ptr
+					SkipConstValue ref Ptr
+					
+			else if Type == DeclaredIdType.Function or Type == DeclaredIdType.Constructor or
+					Type == DeclaredIdType.Destructor
+					
+				SkipUndeclaredId ref Ptr
+				
+				if HasOverloads: LEB128Helper.Skip ref Ptr
+				if Flags & IdentifierFlags.Virtual != 0
+					LEB128Helper.Skip ref Ptr
+					if Flags & IdentifierFlags.Override != 0
+						LEB128Helper.Skip ref Ptr
+				
+				LEB128Helper.Skip ref Ptr
+				
+			else if Type == DeclaredIdType.Variable
+				SkipUndeclaredId ref Ptr
+				LEB128Helper.Skip ref Ptr
+
+			else if Type == DeclaredIdType.Constant
+				SkipUndeclaredId ref Ptr
+				SkipConstValue ref Ptr
+				
+			else if Type == DeclaredIdType.Property
+				SkipUndeclaredId ref Ptr
+				SkipParameters ref Ptr
+				
+				var Data = *Ptr
+				Ptr++
+				
+				if Data & 1 != 0: SkipDeclaredId ref Ptr
+				if Data & 2 != 0: SkipDeclaredId ref Ptr
+					
+			else if Type == DeclaredIdType.Namespace
+				SkipIdentifiers ref Ptr
+				
+			else
+				throw new ApplicationException("invalid DeclaredIdType")
+				
+		public static bool IsSubtypeOf(ref DeclaredIdData Self, IDENTIFIER_PTR Id)
+			if Self.Type != DeclaredIdType.Class and Self.Type != DeclaredIdType.Struct
+				return false
+				
+			for var i in 0 .. Self.Children.Length
+				if Self.Children[i] == Id or IsSubtypeOf(Self.Children[i], Id)
+					return true
+					
+			return false
+		
+		public static bool IsSubtypeOf(IDENTIFIER_PTR Self, IDENTIFIER_PTR Id)
+			var Data = ReadDeclaredId(Self, ReadDeclaredIdFlags.DontReadMembers)
+			var Ret = IsSubtypeOf(ref Data, Id)
+			Data.Free
+			return Ret
+		
+		public static string GetFullName(IDENTIFIER_PTR Ptr)
+			var Ret = new string()
+			var Current = Ptr
+			
+			cycle
+				var IdData = ReadDeclaredId(Current, ReadDeclaredIdFlags.OnlyReadIdData)
+				Ret = IdData.Name.ToString() + Ret
+				Current = IdData.Parent
+				IdData.Free
+				
+				if Current != null: Ret = "." + Ret
+				else return Ret
+				
+			throw new ApplicationException()
+			
+		public static DeclaredIdType GetDeclaredIdType(IDENTIFIER_PTR Ptr)
+			return GetDeclaredIdType(ref (Ptr to byte*))
+		
+		static DeclaredIdType GetDeclaredIdType(ref byte* Ptr)
+			LEB128Helper.Skip ref Ptr
+			LEB128Helper.Skip ref Ptr
+			
+			var Byte = *Ptr
+			Ptr++
+			
+			return Byte & 15 to DeclaredIdType
+			
+		public static DeclaredIdData ReadDeclaredId(IDENTIFIER_PTR Ptr, ReadDeclaredIdFlags ReadFlags = ReadDeclaredIdFlags.All)
+			return ReadDeclaredId(ref (Ptr to byte*), ReadFlags)
+			
+		static DeclaredIdData ReadDeclaredId(ref byte* Ptr, ReadDeclaredIdFlags ReadFlags)
+			var Ret = new DeclaredIdData()
+			Ret.Identifier = Ptr to IDENTIFIER_PTR
+			
+			var OldPtr = Ptr
+			var DescPosition = LEB128Helper.DecodeLong(ref Ptr)
+			var Assembly = OldPtr - DescPosition - 2 * sizeof(void*) to ASSEMBLY_PTR
+			
+			Ret.Assembly = Assembly
+			Ret.Parent = ReadDeclaredReference(Ret.Assembly, ref Ptr)
+			
+			var Byte = *Ptr
+			Ptr++
+			
+			Ret.Type = Byte & 15 to DeclaredIdType
+			Ret.Access = Byte >> 4 to IdentifierAccess
+			var FlagData = *(Ptr to ushort*)
+			var HasOverloads = FlagData & 32768 != 0
+			Ret.Flags = (FlagData to IdentifierFlags) & IdentifierFlags.All
+			Ptr += 2
+			
+			if FlagData & 16384 != 0: Ret.Name = ReadString(ref Ptr)
+			else Ret.Name = new ReflectionString()
+			
+			if Ret.Flags & IdentifierFlags.SpecialName != 0: SkipString ref Ptr
+			if ReadFlags & ReadDeclaredIdFlags.OnlyReadIdData != 0: return Ret
+			
+			if Ret.Type == DeclaredIdType.Alias
+				Ret.BaseUndeclaredId = Assembly, (Ptr to void*)
+				SkipUndeclaredId ref Ptr
+			
+			else if Ret.Type == DeclaredIdType.Class or Ret.Type == DeclaredIdType.Struct
+				Ret.StructuredSize = LEB128Helper.DecodeInt(ref Ptr)
+				Ret.StructuredAlign = LEB128Helper.DecodeInt(ref Ptr)
+				if *(Ptr to bool*): Ptr += 16 // GUID
+				Ptr += sizeof(bool)
+				
+				if ReadFlags & ReadDeclaredIdFlags.DontReadFreeable == 0
+					Ret.Children.Length = LEB128Helper.DecodeUInt(ref Ptr)
+					var Size = Ret.Children.Length * sizeof(IDENTIFIER_PTR)
+					Ret.Children.Pointer = Memory.Allocate(Size) to IDENTIFIER_PTR*
+					
+					for var i in 0 .. Ret.Children.Length
+						Ret.Children[i] = ReadDeclaredReference(Ret.Assembly, ref Ptr)
+						
+					var Index = LEB128Helper.DecodeInt(ref Ptr)
+					if Index != -1: Ret.FunctionTable = Assembly->GlobalPointers[Index]
+					
+					if ReadFlags & ReadDeclaredIdFlags.DontReadMembers == 0
+						ReadIdentifiers ref Ptr, ref Ret.Members
+					
+			else if Ret.Type == DeclaredIdType.Enum or Ret.Type == DeclaredIdType.Flag
+				Ret.BaseUndeclaredId = Assembly, (Ptr to void*)
+				SkipUndeclaredId ref Ptr
+				
+				if ReadFlags & ReadDeclaredIdFlags.DontReadMembers == 0 and
+				   ReadFlags & ReadDeclaredIdFlags.DontReadFreeable == 0
+				   
+					Ret.EnumValues.Length = LEB128Helper.DecodeUInt(ref Ptr)
+					var Size = Ret.EnumValues.Length * sizeof(EnumValueData)
+					Ret.EnumValues.Pointer = Memory.Allocate(Size) to EnumValueData*
+					
+					for var i in 0 .. Ret.EnumValues.Length
+						Ret.EnumValues[i].Name = ReadString(ref Ptr)
+						Ret.EnumValues[i].Value = ReadConstValue(ref Ptr)
+					
+			else if Ret.Type == DeclaredIdType.Function or Ret.Type == DeclaredIdType.Constructor or
+					Ret.Type == DeclaredIdType.Destructor
+					
+				Ret.BaseUndeclaredId = Assembly, (Ptr to void*)
+				SkipUndeclaredId ref Ptr
+				
+				if HasOverloads: Ret.OverloadIndex = LEB128Helper.DecodeInt(ref Ptr)
+				if Ret.Flags & IdentifierFlags.Virtual != 0
+					Ret.VirtualIndex = LEB128Helper.DecodeInt(ref Ptr)
+					if Ret.Flags & IdentifierFlags.Override != 0
+						Ret.OverriddenId = ReadDeclaredReference(Ret.Assembly, ref Ptr)
+				
+				var Index = LEB128Helper.DecodeInt(ref Ptr)
+				Ret.Address = Assembly->GlobalPointers[Index]
+				
+			else if Ret.Type == DeclaredIdType.Variable
+				Ret.BaseUndeclaredId = Assembly, (Ptr to void*)
+				SkipUndeclaredId ref Ptr
+				
+				if not IsGlobal(ref Ret)
+					Ret.MemberOffset = LEB128Helper.DecodeInt(ref Ptr)
+				else
+					Ret.MemberOffset = -1
+					var Index = LEB128Helper.DecodeInt(ref Ptr)
+					Ret.Address = Assembly->GlobalPointers[Index]
+
+			else if Ret.Type == DeclaredIdType.Constant
+				Ret.BaseUndeclaredId = Assembly, (Ptr to void*)
+				SkipUndeclaredId ref Ptr
+				Ret.ConstValue = ReadConstValue(ref Ptr)
+				
+			else if Ret.Type == DeclaredIdType.Property
+				Ret.BaseUndeclaredId = Assembly, (Ptr to void*)
+				SkipUndeclaredId ref Ptr
+				ReadParameters Assembly, ref Ptr, ref Ret.PropertyParameters
+				
+				var Data = *Ptr
+				Ptr++
+				
+				if ReadFlags & ReadDeclaredIdFlags.DontReadMembers == 0 and 
+				   ReadFlags & ReadDeclaredIdFlags.DontReadFreeable == 0
+				   
+					if Data & 1 != 0
+						Ret.PropertyGetter = Ptr
+						SkipDeclaredId ref Ptr
+					
+					if Data & 2 != 0
+						Ret.PropertySetter = Ptr
+						SkipDeclaredId ref Ptr
+					
+			else if Ret.Type == DeclaredIdType.Namespace
+				if ReadFlags & ReadDeclaredIdFlags.DontReadMembers == 0 and
+				   ReadFlags & ReadDeclaredIdFlags.DontReadFreeable == 0
+				   
+					ReadIdentifiers ref Ptr, ref Ret.Members
+				
+			return Ret
+			

@@ -1,0 +1,175 @@
+namespace System.IO
+	public class IOException : SystemException
+		public IOException()
+		
+		public IOException(string message)
+			: base message
+		   
+		public IOException(string message, Exception innerException)
+			: base message, innerException
+			
+	public class EndOfStreamException : SystemException
+		public EndOfStreamException()
+			: base "Attempted to read past the end of a stream"
+		
+		public EndOfStreamException(string message)
+			: base message
+		   
+		public EndOfStreamException(string message, Exception innerException)
+			: base message, innerException
+			
+	public class FileNotFoundException : SystemException
+		string m_FileName
+		
+		public FileNotFoundException()
+			: base "The file attempted to access cannot be found"
+		
+		public FileNotFoundException(string message)
+			: base message
+		   
+		public FileNotFoundException(string message, string fileName)
+			: base message
+			
+			this.m_FileName = fileName
+			
+		public FileNotFoundException(string message, string fileName, Exception innerException)
+			: base message, innerException
+			
+			this.m_FileName = fileName
+			
+		public FileNotFoundException(string message, Exception innerException)
+			: base message, innerException
+			
+		public override string Message:
+			get
+				if m_FileName == null: return base.Message
+				return base.Message + Environment.NewLine + "File name: " + m_FileName
+				
+	public abstract class Stream
+		public abstract void Dispose()
+		
+		public abstract uint_ptr Read(byte[*] Buffer)
+		public abstract uint_ptr Write(byte[*] Buffer)
+		public abstract void Flush()
+		
+		public abstract bool CanRead: get
+		public abstract bool CanWrite: get
+		public abstract bool CanSeek: get
+		public abstract long Position: get set
+		public abstract long Length: get
+		
+		public int Read(byte[] Buffer, int Index, Count)
+			if Buffer === null: throw new ArgumentNullException("Buffer")
+			if Index < 0 or Index >= Buffer.Length: throw new ArgumentOutOfRangeException("Index")
+			if Count < 0 or Index + Count > Buffer.Length: throw new ArgumentOutOfRangeException("Count")
+			
+			byte* Ptr = Buffer
+			Ptr += Index
+			return Read((Ptr, (Count to uint_ptr))) to int
+		
+		public int Write(byte[] Buffer, int Index, Count)
+			if Buffer === null: throw new ArgumentNullException("Buffer")
+			if Index < 0 or Index >= Buffer.Length: throw new ArgumentOutOfRangeException("Index")
+			if Count < 0 or Index + Count > Buffer.Length: throw new ArgumentOutOfRangeException("Count")
+			
+			byte* Ptr = Buffer
+			Ptr += Index
+			return Write((Ptr, (Count to uint_ptr))) to int
+			
+		public void WriteByte(byte Value)
+			var Written = Write((&Value, 1))
+			if Written == 0: throw new IOException()
+			
+		public int ReadByte()
+			byte Value
+			var ReadBytes = Read((&Value, 1))
+			return if ReadBytes == 0: -1 else Value
+		
+	public flag FileAccess
+		Read = 1
+		Write = 2
+		ReadWrite = 3
+		
+	public enum SeekOrigin
+		Begin
+		Current
+		End
+		
+	public enum FileMode
+		Append
+		Create
+		CreateNew
+		Open
+		OpenOrCreate
+		Truncate
+		
+	public class FileStream : Stream
+		Handle _Handle
+		long _Position
+		long _Length
+		bool _OwnsHandle
+		FileAccess _Access
+		
+		public FileStream(Handle Handle, FileAccess Access, bool OwnsHandle)
+			if Handle == null: throw new ArgumentNullException("Handle")
+		
+			this._Handle = Handle
+			this._Access = Access
+			this._OwnsHandle = OwnsHandle
+			CalculatePositionLength
+			
+		public FileStream(string FileName, FileAccess Access)
+			if FileName == null: throw new ArgumentNullException("FileName")
+			if string.IsNullOrWhiteSpace(FileName)
+				throw new ArgumentException("The path is invalid", "FileName")
+			
+			var Mode = ""
+			if Access == FileAccess.Read: Mode = "rb"
+			else if Access == FileAccess.Write: Mode = "wb"
+			else if Access == FileAccess.ReadWrite: Mode ="r+b"
+			
+			this._Handle = StandardC.fopen(FileName, Mode)
+			if this._Handle == null: throw new IOException()
+			
+			this._Access = Access
+			this._OwnsHandle = true
+			CalculatePositionLength
+			
+		void CalculatePositionLength()
+			if StandardC.fgetpos(_Handle, out _Position) != 0: throw new IOException()
+			if StandardC.fseek(_Handle, 0, SeekOrigin.End) != 0: throw new IOException()
+			if StandardC.fgetpos(_Handle, out _Length) != 0: throw new IOException()
+			if StandardC.fsetpos(_Handle, ref _Position) != 0: throw new IOException()
+			
+		public override void Dispose()
+			if _Handle == null: throw new ObjectDisposedException()
+			if StandardC.fclose(_Handle) != 0: throw new IOException()
+		
+		public override uint_ptr Read(byte[*] Buffer)
+			if _Handle == null: throw new ObjectDisposedException()
+			if Buffer.Pointer == null: throw new ArgumentNullException("Buffer.Pointer")
+			if _Access & FileAccess.Read == 0: throw new NotSupportedException("The stram is not readable")
+			
+			var Count = StandardC.fread(Buffer, Buffer.Length, 1, _Handle)
+			_Position += Count
+			return Count
+		
+		public override uint_ptr Write(byte[*] Buffer)
+			if _Handle == null: throw new ObjectDisposedException()
+			if Buffer.Pointer == null: throw new ArgumentNullException("Buffer.Pointer")
+			if _Access & FileAccess.Write == 0: throw new NotSupportedException("The stram is not writeable")
+			
+			var Count = StandardC.fwrite(Buffer, Buffer.Length, 1, _Handle)
+			_Position += Count
+			if _Position > _Length: _Length = _Position
+			return Count
+			
+		public override void Flush()
+			if _Handle == null: throw new ObjectDisposedException()
+			if StandardC.fflush(_Handle) != 0: throw new IOException()
+			
+		public override bool CanRead: get return _Access & FileAccess.Read != 0
+		public override bool CanWrite: get return _Access & FileAccess.Write != 0
+		public override bool CanSeek: get return true
+		public override long Position: get return _Position
+		public override long Length: get return _Length

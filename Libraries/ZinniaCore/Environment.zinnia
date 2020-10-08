@@ -1,0 +1,30 @@
+using System
+using System.Win32
+
+namespace System
+    public static class Environment
+		internal static char*[*] _CommandLineArguments
+	
+        public static void Exit(int ExitCode)
+            StandardC.exit ExitCode
+            
+        public static string NewLine:
+#if OPERATING_SYSTEM == "Windows"
+            get return "~r~n"
+#else
+            get return "~n"
+#endif
+
+		public static string[] CommandLineArguments:
+			get
+				var Ret = new string[_CommandLineArguments.Length]
+				for var i in 0 .. _CommandLineArguments.Length
+					Ret[i] = new string(_CommandLineArguments[i])
+					
+				return Ret
+				
+		public static char*[*] CommandLineArguments2:
+			get return _CommandLineArguments
+			
+		public static int TickCount:
+			get return timeGetTime()

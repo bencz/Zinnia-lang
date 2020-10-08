@@ -1,0 +1,314 @@
+using System
+
+namespace Internals
+	struct SavedRegisters
+		public uint4 xmm4, xmm5, xmm6, xmm7
+		public uint_ptr Ebx, Esp, Ebp, Esi, Edi
+	
+	struct TryBlock
+		public SavedRegisters Registers
+		public Exception* CatchVariable
+		public void* JumpTo
+			
+	TryBlock* TryBlocks = null
+	int TryBlocks_ArrayLength = 0
+	int TryBlocks_Count = 0
+	
+	void AddTryBlock(ref TryBlock TryBlock)
+		*TryBlock.CatchVariable = null
+	
+		TryBlocks_Count++
+		if TryBlocks_ArrayLength < TryBlocks_Count
+			if TryBlocks_ArrayLength == 0: TryBlocks_ArrayLength = 4
+			else TryBlocks_ArrayLength *= 2
+			
+			var NewSize = sizeof(TryBlock) * TryBlocks_ArrayLength
+			if TryBlocks == null: TryBlocks = Memory.Allocate(NewSize) to TryBlock*
+			else TryBlocks = Memory.ReAllocate(TryBlocks, NewSize) to TryBlock*
+			
+		TryBlocks[TryBlocks_Count - 1] = TryBlock
+		
+	public asm void EnterTryBlock(Exception* CatchVariable, void* JumpTo)
+		sub esp, 112
+		movdqu dqword[esp], xmm4
+		movdqu dqword[esp + 16], xmm5
+		movdqu dqword[esp + 32], xmm6
+		movdqu dqword[esp + 48], xmm7
+		mov dword[esp + 64], ebx
+		mov ecx, esp
+		add ecx, 116
+		mov dword[esp + 68], ecx
+		mov dword[esp + 72], ebp
+		mov dword[esp + 76], esi
+		mov dword[esp + 80], edi
+		mov dword[esp + 96], eax
+		mov dword[esp + 100], edx
+		mov eax, esp
+		call $[AddTryBlock]
+		add esp, 112
+		ret
+		
+	public void LeaveTryBlock()
+		if TryBlocks_Count > 0
+			TryBlocks_Count--
+			if TryBlocks_Count == 0
+				Memory.Free TryBlocks
+				TryBlocks_ArrayLength = 0
+		else
+			Environment.Exit -1
+		
+	asm void ThrowExceptionHelper(ref TryBlock TryBlock, Exception e)
+		movdqu xmm4, dqword[eax]
+		movdqu xmm5, dqword[eax + 16]
+		movdqu xmm6, dqword[eax + 32]
+		movdqu xmm7, dqword[eax + 48]
+		mov ebx, dword[eax + 64]
+		mov esp, dword[eax + 68]
+		mov ebp, dword[eax + 72]
+		mov esi, dword[eax + 76]
+		mov edi, dword[eax + 80]
+		mov ecx, dword[eax + 96]
+		mov dword[ecx], edx
+		jmp dword[eax + 100]
+			
+	public void ThrowException(Exception e)
+		if TryBlocks_Count > 0
+			var TryBlock = TryBlocks[TryBlocks_Count - 1]
+			LeaveTryBlock
+			ThrowExceptionHelper ref TryBlock, e
+		else Environment.Exit -1
+		
+namespace System
+	public class Exception
+		string m_Message
+		Exception m_InnerException
+		
+		public Exception()
+		
+		public Exception(string message)
+			this.m_Message = message
+			
+		public Exception(string message, Exception innerException)
+			this.m_Message = message
+			this.m_InnerException = innerException
+			
+		public virtual string Message:
+			get return m_Message
+			
+		public Exception InnerException:
+			get return m_InnerException
+			
+		public Exception GetBaseException()
+			var Current = this
+			while Current.m_InnerException != null
+				Current = Current.m_InnerException
+				
+			return Current
+			
+	public class SystemException : Exception
+		public SystemException()
+		
+		public SystemException(string message)
+			: base message
+		   
+		public SystemException(string message, Exception innerException)
+			: base message, innerException
+			
+	public class ArrayTypeMismatchException : SystemException
+		public ArrayTypeMismatchException()
+			: base "An item cannot be stored in the array"
+		
+		public ArrayTypeMismatchException(string message)
+			: base message
+		   
+		public ArrayTypeMismatchException(string message, Exception innerException)
+			: base message, innerException
+			
+	public class RankException : SystemException
+		public RankException()
+			: base "The array dimensions are invalid."
+		
+		public RankException(string message)
+			: base message
+		   
+		public RankException(string message, Exception innerException)
+			: base message, innerException
+			
+	public class ArgumentException : SystemException
+		string m_ParamName
+		
+		public ArgumentException()
+		
+		public ArgumentException(string message)
+			: base message
+		   
+		public ArgumentException(string message, string paramName)
+			: base message
+			
+			this.m_ParamName = paramName
+			
+		public ArgumentException(string message, string paramName, Exception innerException)
+			: base message, innerException
+			
+			this.m_ParamName = paramName
+			
+		public ArgumentException(string message, Exception innerException)
+			: base message, innerException
+			
+		public override string Message:
+			get
+				if m_ParamName == null: return base.Message
+				Console.WriteLine m_ParamName
+				return base.Message + Environment.NewLine + "Parameter name: " + m_ParamName
+				
+	public class ArgumentOutOfRangeException : ArgumentException
+		object m_ActualValue
+		
+		public ArgumentOutOfRangeException()
+			: base "Specified argument was out of the range of valid values."
+			
+		public ArgumentOutOfRangeException(string paramName)
+			: base "Specified argument was out of the range of valid values.", paramName
+		   
+		public ArgumentOutOfRangeException(string paramName, string message)
+			: base message, paramName
+			
+		public ArgumentOutOfRangeException(string paramName, object actualValue, string message)
+			: base message, paramName
+			
+			this.m_ActualValue = actualValue
+			
+		public ArgumentOutOfRangeException(string message, string paramName, Exception innerException)
+			: base(message, paramName, innerException)
+			
+		public ArgumentOutOfRangeException(string message, Exception innerException)
+			: base message, innerException
+			
+		public object ActualValue:
+			get return m_ActualValue
+			  
+	public class ArgumentNullException : ArgumentException
+		public ArgumentNullException()
+			: base "Specified argument cannot be null."
+			
+		public ArgumentNullException(string paramName)
+			: base "Specified argument cannot be null.", paramName
+		   
+		public ArgumentNullException(string paramName, string message)
+			: base message, paramName
+			
+		public ArgumentNullException(string paramName, string message, Exception innerException)
+			: base message, paramName, innerException
+			
+		public ArgumentNullException(string message, Exception innerException)
+			: base message, innerException
+			
+	public class InvalidOperationException : SystemException
+		public InvalidOperationException()
+			: base("The operation is invalid for the object's current state")
+		
+		public InvalidOperationException(string message)
+			: base message
+		   
+		public InvalidOperationException(string message, Exception innerException)
+			: base message, innerException
+			
+	public class NotImplementedException : SystemException
+		public NotImplementedException()
+			: base "The method or operation is not implemented."
+		
+		public NotImplementedException(string message)
+			: base message
+		   
+		public NotImplementedException(string message, Exception innerException)
+			: base message, innerException
+			
+	public class NotSupportedException : SystemException
+		public NotSupportedException()
+			: base "Specified method is not supported."
+		
+		public NotSupportedException(string message)
+			: base message
+		   
+		public NotSupportedException(string message, Exception innerException)
+			: base message, innerException
+			
+	public class NullReferenceException : SystemException
+		public NullReferenceException()
+			: base "Object reference not set to an instance of an object."
+		
+		public NullReferenceException(string message)
+			: base message
+		   
+		public NullReferenceException(string message, Exception innerException)
+			: base message, innerException
+			
+	public class IndexOutOfRangeException : SystemException
+		public IndexOutOfRangeException()
+			: base "Index was outside the bounds of the array."
+		
+		public IndexOutOfRangeException(string message)
+			: base message
+		   
+		public IndexOutOfRangeException(string message, Exception innerException)
+			: base message, innerException
+			
+	public class ApplicationException : SystemException
+		public ApplicationException()
+			: base "Error in the application."
+			
+		public ApplicationException(string message)
+			: base message
+		   
+		public ApplicationException(string message, Exception innerException)
+			: base message, innerException
+			
+	public class InvalidCastException : SystemException
+		public InvalidCastException()
+			: base "Cannot cast to the specified type."
+		
+		public InvalidCastException(string message)
+			: base message
+		   
+		public InvalidCastException(string message, Exception innerException)
+			: base message, innerException
+			 
+	public class FormatException : SystemException
+		public FormatException()
+			: base "The parameter's format doesn't meet the method's specification."
+		
+		public FormatException(string message)
+			: base message
+		   
+		public FormatException(string message, Exception innerException)
+			: base message, innerException
+			
+	public class ArithmeticException : SystemException
+		public ArithmeticException()
+			: base "An error occurred in an arithmetic, casting, or conversion operation"
+		
+		public ArithmeticException(string message)
+			: base message
+		   
+		public ArithmeticException(string message, Exception innerException)
+			: base message, innerException
+			
+	public class OverflowException : ArithmeticException
+		public OverflowException()
+			: base "An arithmetic, casting, or conversion operation resulted in an overflow"
+		
+		public OverflowException(string message)
+			: base message
+		   
+		public OverflowException(string message, Exception innerException)
+			: base message, innerException
+			
+	public class ObjectDisposedException : SystemException
+		public ObjectDisposedException()
+			: base "The operation cannot be performed on a disposed object"
+		
+		public ObjectDisposedException(string message)
+			: base message
+		   
+		public ObjectDisposedException(string message, Exception innerException)
+			: base message, innerException

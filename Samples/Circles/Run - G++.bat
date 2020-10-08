@@ -1,0 +1,1 @@
+@..\..\Binaries\Zinnia.exe -x ..\CppMain.zinnia Circles.cpp

@@ -1,0 +1,1 @@
+@..\..\Binaries\Zinnia.exe -x Template.zinnia -out Template.exe

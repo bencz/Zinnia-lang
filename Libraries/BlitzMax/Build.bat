@@ -1,0 +1,1 @@
+@..\..\Binaries\Zinnia.exe -lZinniaCore -nodefaultlib BlitzMax.zinnia -format arc -out BlitzMax.a -zlib BlitzMax.zlib -entry "BlitzMax.Main"

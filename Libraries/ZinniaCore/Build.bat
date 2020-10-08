@@ -1,0 +1,1 @@
+@..\..\Binaries\Zinnia.exe FileList.txt -nodefaultlib -format arc -out ZinniaCore.a -zlib ZinniaCore.zlib -incbin "ToLowerData.dat" -incbin "ToUpperData.dat" -incbin "CategoryData.dat"

@@ -1,0 +1,1 @@
+@..\..\Binaries\Zinnia.exe -x Reflection.zinnia -entry ReflectionSamples.Main

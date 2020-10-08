@@ -1,0 +1,56 @@
+namespace System
+	public static class Console
+		public static string ReadLine()
+			char[256] Buf
+			if StandardC.fgetws(Buf, 256, StandardC.stdin) == null
+				return ""
+			
+			var Length = StandardC.wcslen(Buf) to int
+			
+			cycle
+				if Buf[Length - 1] == '~n': Length--
+				else if Buf[Length - 1] == '~r': Length--
+				else break
+				
+			return new string((Buf, (Length to uint_ptr)))
+			
+		public static void Write(object value)
+			if value != null: Write value.ToString()
+		
+		public static void Write(string value)
+			StandardC.wprintf (value.m_Chars, (value.m_Length to uint_ptr))
+			
+		public static void Write(string format, params object[] args)
+			Write string.Format(format, args)
+		
+		public static void Write(string format, object arg0)
+			Write format, (new[]: arg0)
+			
+		public static void Write(string format, object arg0, arg1)
+			Write format, (new[]: arg0, arg1)
+			
+		public static void Write(string format, object arg0, arg1, arg2)
+			Write format, (new[]: arg0, arg1, arg2)
+			
+		public static void WriteLine(object value)
+			if value != null: WriteLine value.ToString()
+			else WriteLine
+		
+		public static void WriteLine(string value)
+			Write value
+			Write Environment.NewLine
+		
+		public static void WriteLine(string format, params object[] args)
+			WriteLine string.Format(format, args)
+		
+		public static void WriteLine(string format, object arg0)
+			WriteLine format, (new[]: arg0)
+			
+		public static void WriteLine(string format, object arg0, arg1)
+			WriteLine format, (new[]: arg0, arg1)
+			
+		public static void WriteLine(string format, object arg0, arg1, arg2)
+			WriteLine format, (new[]: arg0, arg1, arg2)
+			
+		public static void WriteLine()
+			Write Environment.NewLine

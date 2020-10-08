@@ -1,0 +1,1 @@
+@..\..\Binaries\Zinnia.exe -x -entry FireSample.Main Fire.zinnia

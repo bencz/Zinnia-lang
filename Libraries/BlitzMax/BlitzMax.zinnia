@@ -1,0 +1,128 @@
+using System
+
+extern cdecl void bbStartup(int argc, char** args, void* dummy1, dummy2)
+extern cdecl void __bb_appstub_appstub()
+extern void* bbGCStackTop
+
+namespace BlitzMax
+	void Main()
+		var Args = Environment.CommandLineArguments2
+		bbStartup (Args.Length to int), Args.Pointer, null, null
+		bbGCStackTop = (bbGCStackTop to byte*) + 72
+		__bb_appstub_appstub
+		
+		SetGraphicsDriver D3D9Max2DDriver()
+
+	public enum Keys
+		Backspace = 8, Tab
+		Enter = 13
+		Escape = 27
+		Space = 32
+		PageUp = 33, PageDown, End, Home
+		Left = 37, Up, Right, Down
+		Insert = 45, Delete
+		N0 = 48, N1, N2, N3, N4, N5, N6, N7, N8, N9
+		A = 65, B, C, D, E, F, G, H, I, J
+		K, L, M, N, O, P, Q, R, S, T
+		U, V, W, X, Y, Z
+		
+		LSys = 91, Rys
+		
+		Numpad0 = 96, Numpad1, Numpad2, Numpad3, Numpad4
+		Numpad5, Numpad6, Numpad7, Numpad8, Numpad9
+		NumpadMul = 106, NumpadAdd, NumpadSlash
+		NumpadSub, NumpadDecimal, NumpadDivide
+
+		F1 = 112, F2, F3, F4, F5, F6
+		F7, F8, F9, F10, F11, F12
+
+		LShift = 160, RShift
+		LControl = 162, RControl
+		LAlt = 164, RAlt
+
+		Tilde = 192, Minus = 189, Equals = 187
+		OpenBacket = 219, CloseBracket = 221, BackSlash = 226
+		SemiColon = 186, Qutes = 222
+		Comma = 188, Period = 190, Slash = 19
+
+	public enum BlendMode
+		Mask = 1
+		Solid
+		Alpha
+		Light
+		Share
+		
+	public enum PixelFormat
+		A8
+		I8
+		RGB888
+		BGR888
+		RGBA8888
+		BGRA8888
+	 
+	public extern cdecl asmname("_bb_BeginPerf")                    void BeginPerf()
+	public extern cdecl asmname("_bb_EndPerf")                      void EndPerf()
+	public extern cdecl asmname("_bbGCCollect")                     void GCCollect()
+	public extern cdecl asmname("_bbGCSuspend")                     void GCSuspend()
+	public extern cdecl asmname("_bbHandleFromObject")              int HandleFromObject(Handle Obj)
+	public extern cdecl asmname("_bbMilliSecs")                     int MilliSecs()
+	
+	public extern cdecl asmname("_brl_d3d9max2d_D3D9Max2DDriver")	Handle D3D9Max2DDriver()
+	public extern cdecl asmname("_brl_graphics_SetGraphicsDriver")	void SetGraphicsDriver(Handle Driver, int defaultFlags = 2)
+	public extern cdecl asmname("_brl_graphics_Graphics")           Handle Graphics(int Width, Height, Depth = 0, Hertz = 60, Flags = 0)
+	public extern cdecl asmname("_brl_graphics_Flip")               void Flip(int Sync = -1)
+
+	public extern cdecl asmname("_brl_polledinput_AppTerminate")    bool AppTerminate()
+	public extern cdecl asmname("_brl_polledinput_KeyHit")          bool KeyHit(Keys key)
+	public extern cdecl asmname("_brl_polledinput_MouseX")          int MouseX()
+	public extern cdecl asmname("_brl_polledinput_MouseY")          int MouseY()
+    
+	public extern cdecl asmname("_brl_max2d_CreateImage")           Handle CreateImage(int Width, Height, Frames = 1, Flags = -1)
+	//public extern cdecl asmname("_brl_max2d_LockImage")             Handle LockImage(Handle Image, int Frame = 0, bool Read = true, Write = true)
+	public extern cdecl asmname("_brl_max2d_LockImage")             Handle LockImage(Handle Image, int Frame = 0, int Read = 1, Write = 1)
+	public extern cdecl asmname("_brl_max2d_UnlockImage")           void UnlockImage(Handle Image, int Frame = 0)
+	public extern cdecl asmname("_brl_max2d_ImageWidth")            int ImageWidth(Handle Image)
+	public extern cdecl asmname("_brl_max2d_ImageHeight")           int ImageHeight(Handle Image)
+	
+	public extern cdecl asmname("_brl_max2d_Cls")                   void Cls()
+	public extern cdecl asmname("_bb_DrawFrameStats")               void DrawFrameStats()
+	public extern cdecl asmname("_brl_max2d_DrawRect")              void DrawRect(float x, y, Width, Height)
+	public extern cdecl asmname("_brl_max2d_SetColor")              void SetColor(int Red, Green, Blue)
+	public extern cdecl asmname("_brl_max2d_SetBlend")              void SetBlend(BlendMode Mode)
+	public extern cdecl asmname("_brl_max2d_SetAlpha")              void SetAlpha(float Alpha)
+	public extern cdecl asmname("_brl_max2d_DrawImage")             void DrawImage(Handle Image, float X, Y, int Frame = 0)
+	public extern cdecl asmname("_brl_max2d_DrawImageRect")         void DrawImageRect(Handle Image, float X, Y, Width, Height, int Frame = 0)
+	public extern cdecl asmname("_brl_max2d_DrawPixmap")         	void DrawPixmap(Handle Pixmap, int X, Y)
+
+	public extern cdecl asmname("_brl_pixmap_CreatePixmap")         Handle CreatePixmap(int Width, Height, PixelFormat Format, int Align)
+	public extern cdecl asmname("_brl_pixmap_CopyPixmap")           Handle CopyPixmap(Handle Pixmap)
+	public extern cdecl asmname("_brl_pixmap_ConvertPixmap")        Handle ConvertPixmap(Handle Pixmap, PixelFormat Format)
+	public extern cdecl asmname("_brl_pixmap_PixmapWidth")          int PixmapWidth(Handle Pixmap)
+	public extern cdecl asmname("_brl_pixmap_PixmapHeight")         int PixmapHeight(Handle Pixmap)
+	public extern cdecl asmname("_brl_pixmap_PixmapPitch")          int PixmapPitch(Handle Pixmap)
+	public extern cdecl asmname("_brl_pixmap_PixmapFormat")         PixelFormat PixmapFormat(Handle Pixmap)
+	public extern cdecl asmname("_brl_pixmap_PixmapPixelPtr")       void* PixmapPixelPtr(Handle Pixmap, int X, Y)
+	public extern cdecl asmname("_brl_pixmap_PixmapWindow")         Handle PixmapWindow(Handle Pixmap, int X, Y, Width, Height)
+	public extern cdecl asmname("_brl_pixmap_ResizePixmap")         Handle ResizePixmap(Handle Pixmap, int Width, Height)
+	public extern cdecl asmname("_brl_pixmap_ClearPixels")          void ClearPixels(Handle Pixmap, int Color)
+	public extern cdecl asmname("_brl_pixmap_WritePixel")           void WritePixel(Handle Pixmap, int X, Y, Color)
+	public extern cdecl asmname("_brl_pixmap_ReadPixel")            int ReadPixel(Handle Pixmap, int X, Y)
+		
+	public Handle Graphics(int2 Size, int Depth = 0, Hertz = 60, Flags = 0)
+		return Graphics(Size.x, Size.y, Depth, Hertz, Flags)
+		
+	public Handle CreateImage(int2 Size, int Frames = 1, Flags = -1)
+		return CreateImage(Size.x, Size.y, Frames, Flags)
+		
+    public int2 GetMousePosition()
+        return MouseX(), MouseY()
+		
+	int2 ImageSize(Handle Image)
+		return ImageWidth(Image), ImageHeight(Image)
+	
+	public void DrawImage(Handle Image, float2 Pos, int Frame = 0)
+		DrawImage(Image, Pos.x, Pos.y, Frame)
+	
+	public void DrawImageRect(Handle Image, float2 Pos, Size, int Frame = 0)
+		DrawImageRect(Image, Pos.x, Pos.y, Size.x, Size.y, Frame)
+	

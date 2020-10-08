@@ -1,0 +1,154 @@
+namespace System.IO
+	public class BinaryWriter
+		Stream _Stream
+	
+		public BinaryWriter(Stream Stream)
+			if Stream == null: throw new ArgumentNullException("Stream")
+			
+			this._Stream = Stream
+			
+		public Stream BaseStream:
+			get return _Stream
+		
+		public void Dispose()
+			_Stream.Dispose
+		
+		public void Write(byte[*] Buffer)
+			while Buffer.Length > 0
+				var Written = _Stream.Write(Buffer)
+				if Written == 0: throw new IOException()
+				
+				Buffer.Length -= Written
+				Buffer.Pointer += Written
+			
+		public void Write(byte[] Buffer)
+			Write ((Buffer to byte*), Buffer.PtrLength)
+		
+		public void Write(byte[] Buffer, int Index, Count)
+			if Buffer === null: throw new ArgumentNullException("Buffer")
+			if Index < 0 or Index >= Buffer.Length: throw new ArgumentOutOfRangeException("Index")
+			if Count < 0 or Index + Count > Buffer.Length: throw new ArgumentOutOfRangeException("Count")
+			
+			byte* Ptr = Buffer
+			Ptr += Index
+			Write (Ptr, (Count to uint_ptr))
+		
+		public void Write(byte Value)
+			Write (&Value, sizeof(byte))
+			
+		public void Write(sbyte Value)
+			Write ((&Value to byte*), sizeof(sbyte))
+			
+		public void Write(ushort Value)
+			Write ((&Value to byte*), sizeof(ushort))
+			
+		public void Write(short Value)
+			Write ((&Value to byte*), sizeof(short))
+			
+		public void Write(uint Value)
+			Write ((&Value to byte*), sizeof(uint))
+			
+		public void Write(int Value)
+			Write ((&Value to byte*), sizeof(int))
+			
+		public void Write(ulong Value)
+			Write ((&Value to byte*), sizeof(ulong))
+			
+		public void Write(long Value)
+			Write ((&Value to byte*), sizeof(long))
+			
+		public void Write(float Value)
+			Write ((&Value to byte*), sizeof(float))
+			
+		public void Write(double Value)
+			Write ((&Value to byte*), sizeof(double))
+			
+		public void Write(bool Value)
+			Write ((&Value to byte*), sizeof(bool))
+			
+	public class BinaryReader
+		Stream _Stream
+	
+		public BinaryReader(Stream Stream)
+			if Stream == null: throw new ArgumentNullException("Stream")
+			
+			this._Stream = Stream
+			
+		public Stream BaseStream:
+			get return _Stream
+		
+		public void Dispose()
+			_Stream.Dispose
+		
+		public void Read(byte[*] Buffer)
+			while Buffer.Length > 0
+				var ReadBytes = _Stream.Read(Buffer)
+				if ReadBytes == 0: throw new IOException()
+				
+				Buffer.Length -= ReadBytes
+				Buffer.Pointer += ReadBytes
+			
+		public void Read(byte[] Buffer)
+			Read ((Buffer to byte*), Buffer.PtrLength)
+		
+		public void Read(byte[] Buffer, int Index, Count)
+			if Buffer === null: throw new ArgumentNullException("Buffer")
+			if Index < 0 or Index >= Buffer.Length: throw new ArgumentOutOfRangeException("Index")
+			if Count < 0 or Index + Count > Buffer.Length: throw new ArgumentOutOfRangeException("Count")
+			
+			byte* Ptr = Buffer
+			Ptr += Index
+			Read (Ptr, (Count to uint_ptr))
+		
+		public byte ReadByte()
+			byte Ret
+			Read (&Ret, sizeof(byte))
+			return Ret
+			
+		public sbyte ReadSByte()
+			sbyte Ret
+			Read ((&Ret to byte*), sizeof(sbyte))
+			return Ret
+			
+		public ushort ReadUInt16()
+			ushort Ret
+			Read ((&Ret to byte*), sizeof(ushort))
+			return Ret
+			
+		public short ReadInt16()
+			short Ret
+			Read ((&Ret to byte*), sizeof(short))
+			return Ret
+			
+		public uint ReadUInt32()
+			uint Ret
+			Read ((&Ret to byte*), sizeof(uint))
+			return Ret
+			
+		public int ReadInt32()
+			int Ret
+			Read ((&Ret to byte*), sizeof(int))
+			return Ret
+			
+		public ulong ReadUInt64()
+			ulong Ret
+			Read ((&Ret to byte*), sizeof(ulong))
+			return Ret
+			
+		public long ReadInt64()
+			long Ret
+			Read ((&Ret to byte*), sizeof(long))
+			return Ret
+			
+		public float ReadSingle()
+			float Ret
+			Read ((&Ret to byte*), sizeof(float))
+			return Ret
+			
+		public double ReadDouble()
+			double Ret
+			Read ((&Ret to byte*), sizeof(double))
+			return Ret
+			
+		public bool ReadBoolean()
+			return ReadByte() != 0

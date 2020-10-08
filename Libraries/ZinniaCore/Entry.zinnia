@@ -1,0 +1,31 @@
+using System
+using Internals
+using Internals.Reflection
+
+public cdecl int main(int argc, char** args)
+	Environment._CommandLineArguments = (args, (argc to uint_ptr))
+	ApplicationEntry
+	return 0
+
+namespace System
+	void CallAssemblyEntries(Assembly* Assembly)
+		var Data = Assembly->Data
+		for var i in 0 .. Data->Assemblies.Length
+			CallAssemblyEntries Data->Assemblies[i].Assembly
+			
+		if not Data->AssemblyEntryCalled and Data->AssemblyEntry != null
+			Data->AssemblyEntry
+			Data->AssemblyEntryCalled = true
+
+	void ApplicationEntry()
+		Reflection.Initialize
+		
+		try
+			CallAssemblyEntries Reflection.EntryAssembly
+		catch Exception e
+			var Str = "Unhandled exception of type " + e.ToString()
+			var Message = e.Message
+			if Message !== null: Str += ": " + e.Message
+			Console.WriteLine Str
+		
+		Reflection.Uninitialize

@@ -1,0 +1,201 @@
+namespace System
+	public static class Convert
+		public static ulong ToUInt64(byte value)
+			return value to ulong
+	
+		public static ulong ToUInt64(sbyte value)
+			return checked value to ulong
+	
+		public static ulong ToUInt64(ushort value)
+			return value to ulong
+	
+		public static ulong ToUInt64(short value)
+			return checked value to ulong
+	
+		public static ulong ToUInt64(uint value)
+			return value to ulong
+	
+		public static ulong ToUInt64(int value)
+			return checked value to ulong
+	
+		public static ulong ToUInt64(ulong value)
+			return value
+	
+		public static ulong ToUInt64(long value)
+			return checked value to ulong
+	
+		public static ulong ToUInt64(char value)
+			return checked value to ulong
+	
+		public static ulong ToUInt64(bool value)
+			if value: return 1 else return 0
+			
+		public static ulong ToUInt64(double value)
+			value = Math.Round(value)
+			if value < ulong.MinValue or value > ulong.MaxValue
+				throw new OverflowException()
+				
+			return value to ulong
+	
+		public static ulong ToUInt64(float value)
+			return ToUInt64(value to double)
+			
+		public static ulong ToUInt64(string value)
+			if string.IsNullOrEmpty(value)
+				return 0
+				
+			ulong Ret = 0
+			for var i in 0 .. value.m_Length
+				var c = value.m_Chars[i]
+				if not '0' <= c <= '9' and (c != '-' or i == 0)
+					throw new FormatException()
+					
+				if c == '-': throw new OverflowException()
+				Ret = checked Ret * 10 + (c - '0' to ulong)
+			
+			return Ret
+			
+		public static long ToInt64(byte value)
+			return checked value to long
+	
+		public static long ToInt64(sbyte value)
+			return value to long
+	
+		public static long ToInt64(ushort value)
+			return checked value to long
+	
+		public static long ToInt64(short value)
+			return value to long
+	
+		public static long ToInt64(uint value)
+			return checked value to long
+	
+		public static long ToInt64(int value)
+			return value to long
+	
+		public static long ToInt64(ulong value)
+			return checked value to long
+	
+		public static long ToInt64(long value)
+			return value
+	
+		public static long ToInt64(char value)
+			return checked value to long
+	
+		public static long ToInt64(bool value)
+			if value: return 1 else return 0
+			
+		public static long ToInt64(double value)
+			value = Math.Round(value)
+			if value < long.MinValue or value > long.MaxValue
+				throw new OverflowException()
+				
+			return value to long
+	
+		public static long ToInt64(float value)
+			return ToInt64(value to double)
+			
+		public static long ToInt64(string value)
+			if string.IsNullOrEmpty(value)
+				return 0
+				
+			long Ret = 0
+			var Sign = false
+			for var i in 0 .. value.m_Length
+				var c = value.m_Chars[i]
+				if not '0' <= c <= '9' and (c != '-' or i != 0)
+					throw new FormatException()
+					
+				if c == '-': Sign = true; continue
+				Ret = checked Ret * 10 + (c - '0' to long)
+			
+			if Sign: Ret = checked -Ret
+			return Ret
+			
+			
+			
+		public static uint ToUInt32(byte value)
+			return value to uint
+	
+		public static uint ToUInt32(sbyte value)
+			return checked value to uint
+	
+		public static uint ToUInt32(ushort value)
+			return value to uint
+	
+		public static uint ToUInt32(short value)
+			return checked value to uint
+	
+		public static uint ToUInt32(uint value)
+			return value
+	
+		public static uint ToUInt32(int value)
+			return checked value to uint
+	
+		public static uint ToUInt32(ulong value)
+			return checked value to uint
+	
+		public static uint ToUInt32(long value)
+			return checked value to uint
+	
+		public static uint ToUInt32(char value)
+			return checked value to uint
+	
+		public static uint ToUInt32(bool value)
+			if value: return 1 else return 0
+			
+		public static uint ToUInt32(double value)
+			value = Math.Round(value)
+			if value < uint.MinValue or value > uint.MaxValue
+				throw new OverflowException()
+				
+			return value to uint
+	
+		public static uint ToUInt32(float value)
+			return ToUInt32(value to double)
+			
+		public static uint ToUInt32(string value)
+			return checked ToUInt64(value) to uint
+			
+		public static int ToInt32(byte value)
+			return value to int
+	
+		public static int ToInt32(sbyte value)
+			return value to int
+	
+		public static int ToInt32(ushort value)
+			return value to int
+	
+		public static int ToInt32(short value)
+			return value to int
+	
+		public static int ToInt32(uint value)
+			return checked value to int
+	
+		public static int ToInt32(int value)
+			return value
+	
+		public static int ToInt32(ulong value)
+			return checked value to int
+	
+		public static int ToInt32(long value)
+			return checked value to int
+	
+		public static int ToInt32(char value)
+			return checked value to int
+	
+		public static int ToInt32(bool value)
+			if value: return 1 else return 0
+			
+		public static int ToInt32(double value)
+			value = Math.Round(value)
+			if value < int.MinValue or value > int.MaxValue
+				throw new OverflowException()
+				
+			return value to int
+	
+		public static int ToInt32(float value)
+			return ToInt32(value to double)
+			
+		public static int ToInt32(string value)
+			return checked ToInt64(value) to int

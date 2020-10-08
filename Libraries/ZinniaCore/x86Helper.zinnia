@@ -1,0 +1,546 @@
+#define LONG_FIRST_BIT $8000000000000000
+#define INT_FIRST_BIT $80000000
+
+#define DOUBLE_EXPONENT $7FF0000000000000
+#define DOUBLE_EXPONENT_FIRST_BIT $0010000000000000
+#define DOUBLE_MANTISSA $000FFFFFFFFFFFFF
+	
+namespace Internals
+	using System
+	
+	public static class _x86Helper
+		public static var DefaultFPUControlWord = $033Fus
+		public static var RoundToNearestFPUControlWord = $033Fus
+		public static var RoundDownFPUControlWord = $073Fus
+		public static var RoundUpFPUControlWord = $0B3Fus
+		public static var TruncateFPUControlWord = $0F3Fus
+		
+		public static var DefaultMXCSR = $1F80u
+		public static var RoundToNearestMXCSR = $1F80u
+		public static var RoundDownMXCSR = $3F80u
+		public static var RoundUpMXCSR = $5F80u
+		public static var TruncateMXCSR = $7F80u
+		
+		public static align(16) var FloatNegateXOR = (int.MinValue, int.MinValue, int.MinValue, int.MinValue)
+		public static align(16) var DoubleNegateXOR = (long.MinValue, long.MinValue)
+		public static align(16) var FloatAbsAND = (int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue)
+		public static align(16) var DoubleAbsAND = (long.MaxValue, long.MaxValue)
+		
+		public static asm void* GetEsp()
+			mov eax, esp
+			sub eax, 4
+			ret
+		
+		static asm bool CompareEbpEsp()
+			mov edx, esp
+			add edx, 80
+			cmp ebp, edx
+			sete al
+			ret
+			
+		public static void CheckStack()
+			if not CompareEbpEsp()
+				throw new Exception("The stack is corrupted")
+		
+#if FP_MODE == "FPU"
+		public static asm double fyl2x(double x, y)
+			fld qword[esp + 12]
+			fld qword[esp + 4]
+			fyl2x
+			ret 16
+			
+		public static asm double fl2x(double x)
+			fld1
+			fld qword[esp + 4]
+			fyl2x
+			ret 8
+			
+		public static asm double f2xm1(double x)
+			fld qword[esp + 4]
+			f2xm1
+			ret 8
+			
+		public static asm double f2x(double x)
+			fld qword[esp + 4]
+			f2xm1
+			fld1
+			faddp
+			ret 8
+#elif FP_MODE == "SSE" and defined(FPU)
+		public static asm double fyl2x(double x, y)
+			sub esp, 16
+			movsd qword[esp], xmm0
+			movsd qword[esp + 8], xmm1
+			fld qword[esp]
+			fld qword[esp + 8]
+			fyl2x
+			fstp qword[esp]
+			movsd xmm0, qword[esp]
+			add esp, 16
+			ret
+			
+		public static asm double fl2x(double x)
+			sub esp, 8
+			movsd qword[esp], xmm0
+			fld1
+			fld qword[esp]
+			fyl2x
+			fstp qword[esp]
+			movsd xmm0, qword[esp]
+			add esp, 16
+			ret
+			
+		public static asm double f2xm1(double x)
+			sub esp, 8
+			movsd qword[esp], xmm0
+			fld qword[esp]
+			f2xm1
+			fstp qword[esp]
+			movsd xmm0, qword[esp]
+			add esp, 16
+			ret
+			
+		public static asm double f2x(double x)
+			sub esp, 8
+			movsd qword[esp], xmm0
+			fld qword[esp]
+			f2xm1
+			fld1
+			faddp
+			fstp qword[esp]
+			movsd xmm0, qword[esp]
+			add esp, 16
+			ret
+#endif  
+		
+#ifndef LONG_MODE
+		public static asm long LongShiftLeft(long x, int cl)
+			test cl, 32
+			jz _2
+			mov edx, eax
+			xor eax, eax
+			shl edx, cl
+			ret
+		  _2:
+			shld edx, eax, cl
+			shl eax, cl
+			ret
+			
+		public static asm long LongShiftRight(long x, int cl)
+			test cl, 32
+			jz _2
+			mov eax, edx
+			sar edx, 31
+			sar eax, cl
+			ret
+		  _2:
+			shrd eax, edx, cl
+			sar edx, cl
+			ret
+			
+		public static asm ulong ULongShiftRight(ulong x, int cl)
+			test cl, 32
+			jz _2
+			mov eax, edx
+			xor edx, edx
+			shr eax, cl
+			ret
+		  _2:
+			shrd eax, edx, cl
+			shr edx, cl
+			ret
+			
+		public static asm long LongMul(long x, y)
+			mov ecx, edx
+			or ecx, dword[esp + 8]
+			jnz _1
+			mul dword[esp + 4]
+			ret 8
+		  _1:
+			mov dword[esp - 4], edx
+			mul dword[esp + 4]
+			mov dword[esp - 8], eax
+			mov ecx, edx
+
+			mov eax, dword[esp - 4]
+			mul dword[esp + 8]
+			mov edx, eax
+			add edx, ecx
+			mov eax, dword[esp - 8]
+			ret 8
+		
+		public static asm long LongDiv(long x, y)
+			push ebx
+			xor bx, bx
+			test edx, 80000000h
+			jz _1
+			mov bl, 1
+			neg eax
+			adc edx, 0
+			neg edx
+		  _1:
+			test dword[esp + 12], 80000000h
+			jz _2
+			mov bh, 1
+			neg dword[esp + 8]
+			adc dword[esp + 12], 0
+			neg dword[esp + 12]
+		  _2:
+			push dword[esp + 12]
+			push dword[esp + 12]
+			call $[ULongDiv]
+			xor bl, bh
+			jz _3
+			neg eax
+			adc edx, 0
+			neg edx
+		  _3:
+			pop ebx
+			ret 8
+		
+		public static asm ulong ULongDiv(ulong x, y)
+			push ebx
+			cmp dword[esp + 12], 0
+			jne _1
+			mov ecx, eax
+			mov eax, edx
+			xor edx, edx
+			div dword[esp + 8]
+			mov ebx, eax
+			mov eax, ecx
+			div dword[esp + 8]
+			mov edx, ebx
+			pop ebx
+			ret 8
+			
+		  _1:
+			push esi
+			push edi
+			sub esp, 8
+			mov dword[esp], eax
+			mov dword[esp + 4], edx
+			xor eax, eax
+			xor edx, edx
+			
+		  _3:
+			mov esi, dword[esp + 24]
+			mov edi, dword[esp + 28]
+			
+			cmp dword[esp + 4], edi
+			ja _13
+			jb _2
+			cmp dword[esp], esi
+			jbe _2
+
+		  _13:
+			;------------------
+			; osztandó
+			;------------------
+			cmp dword[esp + 4], 0
+			je _4
+			bsr ebx, dword[esp + 4]
+			add ebx, 32
+			jmp _5
+		  _4:
+			bsr ebx, dword[esp]
+		  _5:
+			mov ecx, ebx
+
+			;------------------
+			; osztó
+			;------------------
+			cmp edi, 0
+			je _6
+			bsr ebx, edi
+			add ebx, 32
+			jmp _7
+		  _6:
+			bsr ebx, esi
+		  _7:
+			sub ecx, ebx
+			
+			;------------------
+			; shift left
+			;------------------
+			cmp cl, 32
+			ja _8
+			shld edi, esi, cl
+			shl esi, cl
+			jmp _9
+		  _8:
+			and cl, 31
+			xor edi, edi
+			shl esi, cl
+			
+			;------------------
+			; shift right 1, ha osztó > osztandó
+			;------------------
+		  _9:
+			cmp edi, dword[esp + 4]
+			ja _10
+			jb _11
+			cmp esi, dword[esp]
+			jbe _11
+		  _10:
+			shrd esi, edi, 1
+			shr edi, 1
+			dec cl
+		  _11:
+
+			;------------------
+			; osztandó - tmp osztó
+			;------------------
+			sub dword[esp], esi
+			sbb dword[esp + 4], edi
+			
+			cmp cl, 32
+			ja _12
+			bts eax, ecx
+			jmp _3
+		  _12:
+			and cl, 31
+			bts edx, ecx
+			jmp _3
+			
+		  _2:
+			add esp, 8
+			pop edi
+			pop esi
+			pop ebx
+			ret 8
+		
+		public static asm long LongMod(long x, y)
+			test edx, 80000000h
+			jz _1
+			neg eax
+			adc edx, 0
+			neg edx
+			push dword[esp + 8]
+			push dword[esp + 8]
+			call $[ULongMod]
+			neg eax
+			adc edx, 0
+			neg edx
+			ret 8
+		  _1:
+			push dword[esp + 8]
+			push dword[esp + 8]
+			call $[ULongMod]
+			ret 8
+		
+		public static asm ulong ULongMod(ulong x, y)
+			cmp dword[esp + 8], 0
+			jne _1
+			mov ecx, eax
+			mov eax, edx
+			xor edx, edx
+			div dword[esp + 4]
+			mov eax, ecx
+			div dword[esp + 4]
+			mov eax, edx
+			xor edx, edx
+			ret 8
+			
+		  _1:
+			push ebx
+			push esi
+			push edi
+			
+		  _3:
+			mov esi, dword[esp + 16]
+			mov edi, dword[esp + 20]
+			
+			cmp edx, edi
+			ja _13
+			jb _2
+			cmp eax, esi
+			jbe _2
+
+		  _13:
+			;------------------
+			; osztandó
+			;------------------
+			cmp edx, 0
+			je _4
+			bsr ebx, edi
+			add ebx, 32
+			jmp _5
+		  _4:
+			bsr ebx, eax
+		  _5:
+			mov ecx, ebx
+
+			;------------------
+			; osztó
+			;------------------
+			cmp edi, 0
+			je _6
+			bsr ebx, edi
+			add ebx, 32
+			jmp _7
+		  _6:
+			bsr ebx, esi
+		  _7:
+			sub ecx, ebx
+			
+			;------------------
+			; shift left
+			;------------------
+			cmp cl, 32
+			ja _8
+			shld edi, esi, cl
+			shl esi, cl
+			jmp _9
+		  _8:
+			and cl, 31
+			xor edi, edi
+			shl esi, cl
+			
+			;------------------
+			; shift right 1, ha osztó > osztandó
+			;------------------
+		  _9:
+			cmp edi, edx
+			ja _10
+			jb _11
+			cmp esi, eax
+			jbe _11
+		  _10:
+			shrd esi, edi, 1
+			shr edi, 1
+			dec cl
+		  _11:
+
+			;------------------
+			; osztandó - tmp osztó
+			;------------------
+			sub eax, esi
+			sbb edx, edi
+			
+		  _2:
+			pop edi
+			pop esi
+			pop ebx
+			ret 8
+#endif
+
+//--------------------------------------------------------------------------------------
+#if FP_MODE == "FPU"
+#ifndef SSE3
+#ifndef LONG_MODE
+		public static asm long DoubleToLong(double a)
+			fldcw $[TruncateFPUControlWord]
+			fld qword[esp + 4]
+			fistp qword[esp - 8]
+			fldcw $[DefaultFPUControlWord]
+			mov eax, dword[esp - 8]
+			mov edx, dword[esp - 4]
+			ret 8
+#else
+		public static asm long DoubleToLong(double a)
+			fldcw $[TruncateFPUControlWord]
+			fld qword[esp + 4]
+			fistp qword[esp - 8]
+			fldcw $[DefaultFPUControlWord]
+			mov rax, qword[esp - 8]
+			ret 8
+#endif
+#endif
+		public static ulong DoubleToULong(double a)
+			if a < 0: return ulong.MaxValue
+			else if a <= long.MaxValue: return (ulong)(long)a
+			else if a <= ulong.MaxValue: return LONG_FIRST_BIT | (ulong)(long)(a - LONG_FIRST_BIT)
+			else return ulong.MaxValue
+			
+		public static double ULongToDouble(ulong x)
+			return (double)(long)(x & ~LONG_FIRST_BIT) - (double)(long)(x & LONG_FIRST_BIT)
+		
+		rem public static asm double ULongToDouble(ulong x)
+			mov eax, dword[esp + 8]
+			and dword[esp + 8], 0x7FFFFFFF
+			fild qword[esp + 4]
+			and eax, 0x80000000
+			mov dword[esp + 4], 0
+			mov dword[esp + 8], eax
+			fild qword[esp + 4]
+			fsubp
+			ret 8
+		
+//--------------------------------------------------------------------------------------
+#elif FP_MODE == "SSE"
+#ifndef LONG_MODE
+		public static ulong DoubleToULong(double a)
+			if Math.IsNaN(a) or Math.IsInfinite(a): return 0
+			if a < ulong.MinValue or a > ulong.MaxValue: return ulong.MaxValue
+
+			var Val = reinterpret_cast<ulong>(a)
+			var Ret = Val & DOUBLE_MANTISSA | DOUBLE_EXPONENT_FIRST_BIT
+			var Shift = ((Val & DOUBLE_EXPONENT) >> 52 to int) - 1075
+			
+			if Shift < 0
+				if Shift <= -64: return 0
+				Ret >>= -Shift
+			else
+				Ret <<= Shift
+				
+			return if (Val & $8000000000000000) != 0: ulong.MaxValue else Ret
+			
+		public static long DoubleToLong(double a)
+			if Math.IsNaN(a) or Math.IsInfinite(a): return 0
+			if a < long.MinValue or a > long.MaxValue: return long.MinValue
+
+			var Val = reinterpret_cast<ulong>(a)
+			var Ret = Val & DOUBLE_MANTISSA | DOUBLE_EXPONENT_FIRST_BIT to long
+			var Shift = ((Val & DOUBLE_EXPONENT) >> 52 to int) - 1075
+			
+			if Shift < 0
+				if Shift <= -64: return 0
+				Ret >>= -Shift
+			else
+				Ret <<= Shift
+				
+			return if (Val & $8000000000000000) != 0: -Ret else Ret
+	
+		public static uint DoubleToUInt(double a)
+			if a < 0: return uint.MaxValue
+			else if a <= int.MaxValue: return a to int to uint
+			else if a <= uint.MaxValue: return INT_FIRST_BIT | (a - INT_FIRST_BIT to int to uint)
+			else return uint.MaxValue
+			
+		public static double UIntToDouble(uint x)
+			return (x & ~INT_FIRST_BIT to int to double) - (x & INT_FIRST_BIT to int to double)
+			
+		public static double ULongToDouble(ulong x)
+			var Ret = 0d
+			var Mul = 1d
+			while x > 0
+				Ret += ((x to int) & int.MaxValue) * Mul
+				Mul *= 1l << 31
+				x >>= 31
+				
+			return Ret
+
+		public static double LongToDouble(long x)
+			if x >= 0: return ULongToDouble(x to ulong)
+			else return -ULongToDouble(-x to ulong)
+#else
+		public static double ULongToDouble(ulong x)
+			return (x & ~LONG_FIRST_BIT to long to double) - (x & LONG_FIRST_BIT to long to double)
+		
+		public static ulong DoubleToULong(double a)
+			if a < 0: return ulong.MaxValue
+			else if a <= long.MaxValue: return a to long to ulong
+			else if a <= ulong.MaxValue: return LONG_FIRST_BIT | (a - LONG_FIRST_BIT to long to ulong)
+			else return ulong.MaxValue
+#endif
+#endif
+
+		public static double Modulus(double x, y)
+			return (Math.Abs(x) - Math.Abs(y) * Math.Floor(Math.Abs(x / y))) * Math.Sign(x)
+		
+		public static float Modulus(float x, y)
+			return (Math.Abs(x) - Math.Abs(y) * (Math.Floor(Math.Abs(x / y)) to float)) * Math.Sign(x)
+			
+		public static asm void BreakPoint()
+			int 3
+			ret

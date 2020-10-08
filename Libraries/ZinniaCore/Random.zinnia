@@ -1,0 +1,9 @@
+namespace System
+    public class Random
+        int m_w = 0, m_z = 0
+        
+        public int GetInt()
+            m_z = 36969 * (m_z & 65535) + (m_z >> 16)
+            m_w = 18000 * (m_w & 65535) + (m_w >> 16)
+            return (m_z << 16) + m_w
+            

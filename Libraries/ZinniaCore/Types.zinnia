@@ -1,0 +1,249 @@
+namespace System
+    public alias Handle = void*
+	
+    public alias int4 = (int x, y, z, w)
+    public alias uint4 = (uint x, y, z, w)
+    public alias float4 = (float x, y, z, w)
+    public alias double4 = (double x, y, z, w)
+	
+    public alias int3 = (int x, y, z)
+    public alias uint3 = (uint x, y, z)
+    public alias float3 = (float x, y, z)
+    public alias double3 = (double x, y, z)
+	
+    public alias int2 = (int x, y)
+    public alias uint2 = (uint x, y)
+    public alias float2 = (float x, y)
+    public alias double2 = (double x, y)
+    
+	public struct Void
+
+    public struct Single
+        private float m_Single
+		
+		public override string ToString()
+			return (this to double).ToString(8)
+	
+    public struct Double
+        private double m_Double
+		
+		double Pow10(int x)
+			var Ret = 1d
+			repeat x: Ret *= 10
+			return Ret
+		
+		internal string ToString(int Digits)
+			if Digits <= 0 or Digits > 16
+				throw new ArgumentOutOfRangeException("Digits")
+		
+			if this == 0: return "0.0"
+			if this == Math.Infinite: return "Infinite"
+			if this == -Math.Infinite: return "-Infinite"
+			if Math.IsNaN(this): return "NaN"
+			
+			var Pow10Digits = Pow10(Digits)
+			var AbsThis = Math.Abs(this)
+			
+			if AbsThis >= Pow10Digits or AbsThis < 1d / Pow10Digits
+				var ScientificNotation = this
+				var ENotation = 0
+				while ScientificNotation >= 10
+					ScientificNotation /= 10
+					ENotation++
+					
+				while ScientificNotation <= 1
+					ScientificNotation *= 10
+					ENotation--
+					
+				var ENotationString = ENotation.ToString()
+				if ENotation > 0: ENotationString = "+" + ENotationString
+				return ScientificNotation + "E" + ENotationString
+			else
+				var IntegerPart = (this to long).ToString()
+				var FractionLength = Digits - IntegerPart.Length
+				if FractionLength == 0: return IntegerPart + ".0"
+				
+				var Pos = 0u
+				var Temp = this - (this to long)
+				char[16] Chars = new
+				
+				repeat FractionLength
+					Temp *= 10
+					Chars[Pos] = '0' + ((Temp to long) % 10 to int)
+					Pos++
+					
+				while Pos > 1 and Chars[Pos - 1] == '0': Pos--
+				return IntegerPart + "." + new string((Chars, Pos))
+			
+		public override string ToString()
+			return ToString(15)
+	
+    public struct Boolean
+		public readonly static var TrueString = "True"
+		public readonly static var FalseString = "False"
+	
+        private bool m_Boolean
+		
+		public override string ToString()
+			if m_Boolean: return TrueString
+			else return FalseString
+	
+    public struct Char
+		public const char MinValue = 0 to char
+		public const char MaxValue = $FFFF to char
+	
+        private char m_Char
+        
+        public static char ToLower(char c)
+            if c < ($B5 to char)
+                return if 'A' <= c <= 'Z': c | (32 to char) else c
+            else
+                var Data = incbin_ptr("ToLowerData") to char*
+                uint_ptr Start = 0, End = incbin_size("ToLowerData") / 4 - 1
+                
+                while Start <= End
+                    var Middle = (Start + End) / 2
+                    if Data[Middle * 2] > c: End = Middle - 1
+                    else if Data[Middle * 2] < c: Start = Middle + 1
+                    else return Data[Middle * 2 + 1]
+                    
+            return c
+        
+        public static char ToUpper(char c)
+            if c < ($B5 to char)
+                return if 'a' <= c <= 'z': c & ~(32 to char) else c
+               
+            else
+                var Data = incbin_ptr("ToUpperData") to char*
+                uint_ptr Start = 0, End = incbin_size("ToUpperData") / 4 - 1
+                
+                while Start <= End
+                    var Middle = (Start + End) / 2
+                    if Data[Middle * 2] > c: End = Middle - 1
+                    else if Data[Middle * 2] < c: Start = Middle + 1
+                    else return Data[Middle * 2 + 1]
+                    
+            return c
+			
+		public static bool IsWhiteSpace(char c)
+			return c == ' ' or c == '~t' or c == '~r' or c == '~n'
+            
+		public override string ToString()
+			return new string([m_Char] to char[*])
+			
+    public struct SByte
+		public const sbyte MinValue = -$80
+		public const sbyte MaxValue = $7F
+	
+        private sbyte m_SByte
+		
+		public override string ToString()
+			return (m_SByte to long).ToString()
+        
+    public struct Byte
+		public const byte MinValue = 0
+		public const byte MaxValue = $FF
+	
+        private byte m_Byte
+        
+		public override string ToString()
+			return (m_Byte to ulong).ToString()
+			
+    public struct Int16
+		public const short MinValue = -$8000
+		public const short MaxValue = $7FFF
+	
+        private short m_Int16
+		
+		public override string ToString()
+			return (m_Int16 to long).ToString()
+        
+    public struct UInt16
+		public const ushort MinValue = 0
+		public const ushort MaxValue = $FFFF
+	
+        private ushort m_UInt16
+        
+		public override string ToString()
+			return (m_UInt16 to ulong).ToString()
+			
+    public struct Int32
+		public const int MinValue = -$80000000
+		public const int MaxValue = $7FFFFFFF
+	
+        private int m_Int32
+        
+		public override string ToString()
+			return (m_Int32 to long).ToString()
+			
+    public struct UInt32
+		public const uint MinValue = 0
+		public const uint MaxValue = $FFFFFFFF
+	
+        private uint m_UInt32
+		
+		public override string ToString()
+			return (m_UInt32 to ulong).ToString()
+        
+    public struct Int64
+		public const long MinValue = -$8000000000000000
+		public const long MaxValue = $7FFFFFFFFFFFFFFF
+	
+        private long m_Int64
+		
+		public override string ToString()
+			if this == MinValue:
+				return "-9223372036854775808"
+			
+			var Temp = this
+			uint_ptr Length = 1
+			
+			var Sign = Temp < 0
+			if Sign
+				Temp = -Temp
+				Length++
+				
+			while Temp > 9
+				Temp /= 10
+				Length++
+				
+			Temp = this
+			if Sign: Temp = -Temp
+			
+			var Ret = new string(Length)
+			var Pos = Length - 1
+			
+			do
+				Ret.m_Chars[Pos] = '0' + Temp % 10
+				Temp /= 10
+				Pos--
+			while Temp > 0
+			
+			if Sign: Ret.m_Chars[0] = '-'
+			return Ret
+        
+    public struct UInt64
+		public const ulong MinValue = 0
+		public const ulong MaxValue = $FFFFFFFFFFFFFFFF
+	
+        private ulong m_UInt64
+		
+		public override string ToString()
+			var Temp = this
+			uint_ptr Length = 1
+			while Temp > 9
+				Temp /= 10
+				Length++
+				
+			var Ret = new string(Length)
+			var Pos = Length - 1
+			Temp = this
+			
+			do
+				Ret.m_Chars[Pos] = '0' + Temp % 10
+				Temp /= 10
+				Pos--
+			while Temp > 0
+			
+			return Ret
+		

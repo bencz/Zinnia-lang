@@ -1,0 +1,79 @@
+using Internals
+
+namespace System.Numerics
+	/*public static class BigIntegerHelper
+		public static bool Add(ulong[*] Dst, A, B)
+	
+		public static bool StringToInteger_Unsigned(ulong[*] Dst, char[*] Src)
+	*/	
+
+    public struct BigInteger
+        ulong[] Array
+        
+        public BigInteger(int value)
+            this.Array = new ulong[]: value to long to ulong
+            
+        public BigInteger(uint value)
+            this.Array = new ulong[]: value
+            
+        public BigInteger(long value)
+            this.Array = new ulong[]: value to ulong
+            
+        public BigInteger(ulong value)
+            if value & LONG_FIRST_BIT == 0
+                this.Array = new ulong[]: value, 0
+            else this.Array = new ulong[]: value
+            
+        public BigInteger(double value)
+            var Decoded = new DecodedDouble(value)
+            if Decoded.Type != DecodedDoubleType.Finite
+                this.Array = new ulong[]: 0
+            else
+                var Count = (Decoded.Shift - 1) / sizeof(double) + 1
+                Array = new ulong[Count + 1]
+                
+                if Decoded.Sign
+                    Array[0] = -(Decoded.Mantissa to long) to ulong
+                    for var i in 1 ... Count
+                        Array[i] = ulong.MaxValue
+                else
+                    Array[0] = Decoded.Mantissa
+                    for var i in 1 ... Count
+                        Array[i] = 0
+						
+		public bool Negative:
+			get return Array[Array.Length - 1] & $8000000000000000 != 0
+			
+		public bool Zero:
+			get
+				for var i in 0 .. Array.Length
+					if Array[i] != 0: return false
+					
+				return true
+				
+		public bool One:
+			get
+				if Array.Length == 0: return false
+				if Array[0] != 1: return false
+				for var i in 1 .. Array.Length
+					if Array[i] != 0: return false
+					
+				return true
+				
+		public int Sign:
+			get
+				if Negative: return -1
+				else if not Zero: return 1
+				else return 0
+                        
+		ulong GetBits(int LongIndex, int Shift)
+			return 0
+						
+		void ShiftRightInPlace(int Shift)
+			var Longs = Shift / (sizeof(ulong) * 8)
+			var AddToLeft = if Negative: ulong.MaxValue else 0ul
+			var ArrayLength = Array.Length
+			
+			for var i in 0 .. ArrayLength
+				if i >= ArrayLength - Longs: Array[i] = AddToLeft
+				else Array[i] = Array[i + Longs]

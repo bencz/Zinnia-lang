@@ -1,0 +1,532 @@
+namespace System
+	public static class StringHelper
+		public static char* ToWString(char[*] Str)
+			var Mem = Memory.Allocate(sizeof(char) * (Str.Length + 1)) to char*
+			Memory.Copy Mem, Str, sizeof(char) * Str.Length
+			Mem[Str.Length] = '~0'
+			return Mem
+		
+		public static byte* ToCString(char[*] Str)
+			var Mem = Memory.Allocate(Str.Length + 1) to byte*
+			for var i in 0 .. Str.Length
+				Mem[i] = Str[i] to byte
+			
+			Mem[Str.Length] = 0
+			return Mem
+
+		public static byte* ToUTF8String(char[*] Str)
+			var Mem = Memory.Allocate(Str.Length + 1) to byte*
+			uint_ptr Ptr = 0
+			
+			for var i in 0 .. Str.Length
+				Mem[Ptr] = Str[i] to byte
+				Ptr++
+			
+			Mem[Ptr] = 0
+			return Mem
+			
+	public sealed class String
+		internal int m_Length
+		internal char[?] m_Chars
+
+		public String()
+			m_Length = 0
+			
+		public String(char* value)
+			: _set_extra_storage StandardC.wcslen(value) * sizeof(char)
+			
+			m_Length = checked StandardC.wcslen(value) to int
+			Memory.Copy m_Chars to char*, value, m_Length * sizeof(char)
+
+		public String(char[*] value)
+			: _set_extra_storage value.Length * sizeof(char)
+			
+			m_Length = checked value.Length to int
+			Memory.Copy m_Chars to char*, value, value.Length * sizeof(char)
+
+		public String(int length)
+			: _set_extra_storage length * sizeof(char)
+			
+			m_Length = length
+		
+		public String(uint_ptr length)
+			//: this checked(length to int)
+			: _set_extra_storage length * sizeof(char)
+			
+			m_Length = length to int
+		
+		public int Length:
+			get return m_Length
+			
+		public char this[int index]:
+			get 
+				if index < 0 or index >= m_Length
+					throw new ArgumentOutOfRangeException("index")
+					
+				return m_Chars[index]
+		/*
+		public String()
+			m_Length = 0
+			
+		public String(char* Ptr)
+			this Ptr, StandardC.StringLength(Ptr)
+
+		public String(char* Ptr, int Length)
+			var ExtraStorage = Length * sizeof(char)
+			_set_extra_storage ExtraStorage
+			
+			m_Length = Length
+			Memory.Copy (char*)m_Chars, Ptr, ExtraStorage
+
+		public String(int Length)
+			var ExtraStorage = Length * sizeof(char)
+			_set_extra_storage ExtraStorage
+			m_Length = Length
+		*/
+		public int IndexOf(char Char)
+			for var i in 0 .. m_Length
+				if m_Chars[i] == Char: return i
+				
+			return -1
+			
+		public int IndexOf(char Char, int startIndex)
+			if startIndex < 0 or startIndex > m_Length
+				throw new ArgumentOutOfRangeException("startIndex")
+					
+			for var i in startIndex .. m_Length
+				if m_Chars[i] == Char: return i
+				
+			return -1
+			
+		public int IndexOf(char Char, int startIndex, count)
+			if startIndex < 0 or startIndex > m_Length
+				throw new ArgumentOutOfRangeException("startIndex")
+					
+			if count < 0 or startIndex + count > m_Length
+				throw new ArgumentOutOfRangeException("count")
+				
+			for var i in startIndex .. startIndex + count
+				if m_Chars[i] == Char: return i
+				
+			return -1
+			
+		public int IndexOf(string value)
+			if value === null
+				throw new ArgumentNullException("value")
+		
+			for var i in 0 ... m_Length - value.m_Length
+				if Equals(value, i): return i
+				
+			return -1
+			
+		public int IndexOf(string value, int startIndex)
+			if value === null
+				throw new ArgumentNullException("value")
+		
+			if startIndex < 0 or startIndex > m_Length
+				throw new ArgumentOutOfRangeException("startIndex")
+					
+			for var i in startIndex ... m_Length - value.m_Length
+				if Equals(value, i): return i
+				
+			return -1
+			
+		public int IndexOf(string value, int startIndex, count)
+			if value === null
+				throw new ArgumentNullException("value")
+		
+			if startIndex < 0 or startIndex > m_Length
+				throw new ArgumentOutOfRangeException("startIndex")
+					
+			if count < 0 or startIndex + count > m_Length
+				throw new ArgumentOutOfRangeException("count")
+				
+			var To = Math.Min(startIndex + count - 1, m_Length - value.m_Length)
+			for var i in startIndex .. To
+				if Equals(value, i): return i
+				
+			return -1
+			
+		public int LastIndexOf(char Char)
+			for var i in m_Length - 1 ... 0 step -1
+				if m_Chars[i] == Char: return i
+				
+			return -1
+			
+		public int LastIndexOf(char Char, int startIndex)
+			if startIndex < 0 or startIndex > m_Length
+				throw new ArgumentOutOfRangeException("startIndex")
+					
+			for var i in m_Length - 1 ... startIndex step -1
+				if m_Chars[i] == Char: return i
+				
+			return -1
+			
+		public int LastIndexOf(char Char, int startIndex, count)
+			if startIndex < 0 or startIndex > m_Length
+				throw new ArgumentOutOfRangeException("startIndex")
+					
+			if count < 0 or startIndex + count > m_Length
+				throw new ArgumentOutOfRangeException("count")
+				
+			for var i in startIndex + count - 1 ... startIndex step -1
+				if m_Chars[i] == Char: return i
+				
+			return -1
+			
+		public int LastIndexOf(string value)
+			if value === null
+				throw new ArgumentNullException("value")
+		
+			for var i in m_Length - value.m_Length ... 0 step -1
+				if Equals(value, i): return i
+				
+			return -1
+			
+		public int LastIndexOf(string value, int startIndex)
+			if value === null
+				throw new ArgumentNullException("value")
+		
+			if startIndex < 0 or startIndex > m_Length
+				throw new ArgumentOutOfRangeException("startIndex")
+					
+			for var i in m_Length - value.m_Length ... startIndex step -1
+				if Equals(value, i): return i
+				
+			return -1
+			
+		public int LastIndexOf(string value, int startIndex, count)
+			if value === null
+				throw new ArgumentNullException("value")
+		
+			if startIndex < 0 or startIndex > m_Length
+				throw new ArgumentOutOfRangeException("startIndex")
+					
+			if count < 0 or startIndex + count > m_Length
+				throw new ArgumentOutOfRangeException("count")
+				
+			var Start = Math.Min(startIndex + count - 1, m_Length - value.m_Length)
+			for var i in Start ... startIndex step -1
+				if Equals(value, i): return i
+				
+			return -1
+			
+		public String Substring(int startIndex, length)
+			if startIndex < 0 or startIndex > m_Length
+				throw new ArgumentOutOfRangeException("startIndex")
+					
+			if length < 0 or startIndex + length > m_Length
+				throw new ArgumentOutOfRangeException("length")
+				
+			return new String(((m_Chars to char*) + startIndex, (length to uint_ptr)))
+
+		public String Substring(int startIndex)
+			if startIndex < 0 or startIndex > m_Length
+				throw new ArgumentOutOfRangeException("startIndex")
+					
+			return new String(((m_Chars to char*) + startIndex, (m_Length - startIndex to uint_ptr)))
+
+		public static String Concat(String A, B)
+			if A === null: A = ""
+			if B === null: B = ""
+			
+			var RetString = new String(A.m_Length + B.m_Length)
+			Memory.Copy (RetString.m_Chars to char*), A.m_Chars to char*, A.m_Length * sizeof(char)
+			Memory.Copy (RetString.m_Chars to char*) + A.m_Length, B.m_Chars to char*, B.m_Length * sizeof(char)
+			return RetString
+			
+		public static String Concat(String A, B, C)
+			if A === null: A = ""
+			if B === null: B = ""
+			if C === null: C = ""
+			
+			var RetString = new String(A.m_Length + B.m_Length + C.m_Length)
+			Memory.Copy (RetString.m_Chars to char*), A.m_Chars to char*, A.m_Length * sizeof(char)
+			Memory.Copy (RetString.m_Chars to char*) + A.m_Length, B.m_Chars to char*, B.m_Length * sizeof(char)
+			Memory.Copy (RetString.m_Chars to char*) + A.m_Length + B.m_Length, C.m_Chars to char*, C.m_Length * sizeof(char)
+			return RetString
+			
+		public static String Concat(String A, B, C, D)
+			if A === null: A = ""
+			if B === null: B = ""
+			if C === null: C = ""
+			if D === null: D = ""
+			
+			var RetString = new String(A.m_Length + B.m_Length + C.m_Length + D.m_Length)
+			Memory.Copy (RetString.m_Chars to char*), A.m_Chars to char*, A.m_Length * sizeof(char)
+			Memory.Copy (RetString.m_Chars to char*) + A.m_Length, B.m_Chars to char*, B.m_Length * sizeof(char)
+			Memory.Copy (RetString.m_Chars to char*) + A.m_Length + B.m_Length, C.m_Chars to char*, C.m_Length * sizeof(char)
+			Memory.Copy (RetString.m_Chars to char*) + A.m_Length + B.m_Length + C.m_Length, D.m_Chars to char*, D.m_Length * sizeof(char)
+			return RetString
+			
+		public static String Copy(String str)
+			if str === null: throw new ArgumentNullException("str")
+			return new String((str.m_Chars, (str.m_Length to uint_ptr)))
+			
+		public String Insert(int startIndex, String value)
+			if value === null
+				throw new ArgumentNullException("value")
+				
+			if startIndex < 0 or startIndex > m_Length
+				throw new ArgumentOutOfRangeException("startIndex")
+				
+			var RetString = new String(m_Length + value.m_Length)
+			Memory.Copy (RetString.m_Chars to char*), m_Chars to char*, startIndex * sizeof(char)
+			Memory.Copy (RetString.m_Chars to char*) + startIndex, value.m_Chars to char*, value.m_Length * sizeof(char)
+			Memory.Copy (RetString.m_Chars to char*) + startIndex + value.m_Length, (m_Chars to char*) + startIndex, (m_Length - startIndex) * sizeof(char)
+			return RetString
+			
+		public String Remove(int startIndex)
+			if startIndex < 0 or startIndex > m_Length
+				throw new ArgumentOutOfRangeException("startIndex")
+				
+			return Substring(0, startIndex)
+			
+		public String Remove(int startIndex, int count)
+			if startIndex < 0 or startIndex > m_Length
+				throw new ArgumentOutOfRangeException("startIndex")
+				
+			if count < 0 or startIndex + count > m_Length
+				throw new ArgumentOutOfRangeException("count")
+				
+			var RetString = new String(count)
+			Memory.Copy (RetString.m_Chars to char*), m_Chars to char*, startIndex * sizeof(char)
+			
+			var End = startIndex + count
+			Memory.Copy (RetString.m_Chars to char*) + startIndex, (m_Chars to char*) + End, (m_Length - End) * sizeof(char)
+			return RetString
+			
+		public String Replace(char oldChar, newChar)
+			var RetString = Copy(this)
+			for var i in 0 .. m_Length
+				if RetString.m_Chars[i] == oldChar
+					RetString.m_Chars[i] = newChar
+					
+			return RetString
+			
+		public String Replace(String oldValue, newValue)
+			if oldValue === null: throw new ArgumentNullException("oldValue")
+			if newValue === null: throw new ArgumentNullException("newValue")
+			if oldValue.Length == 0: throw new ArgumentException("The string's length have to be greater than zero.", "oldValue")
+			
+			if oldValue.m_Length > m_Length
+				return this
+			
+			var Matches = 0
+			for var i in 0 ... m_Length - oldValue.m_Length
+				if Equals(oldValue, i): Matches++
+				
+			if Matches == 0
+				return this
+				
+			var RetString = new String(m_Length + Matches * (newValue.m_Length - oldValue.m_Length))
+			var RetDst = RetString.m_Chars to char*
+			
+			var i = 0
+			while i < m_Length
+				if i < m_Length - oldValue.m_Length and Equals(oldValue, i)
+					Memory.Copy RetDst, newValue.m_Chars to char*, newValue.m_Length * sizeof(char)
+					RetDst += newValue.m_Length
+					i += oldValue.m_Length
+				else
+					*RetDst = m_Chars[i]
+					RetDst++
+					i++
+					
+			return RetString
+			
+		public String PadLeft(int totalWidth, char paddingChar)
+			if m_Length >= totalWidth
+				return this
+			
+			var Difference = totalWidth - m_Length
+			var RetString = new String(totalWidth)
+			for var i in 0 .. Difference
+				RetString.m_Chars[i] = paddingChar
+				
+			Memory.Copy (RetString.m_Chars to char*) + Difference, (m_Chars to char*), m_Length * sizeof(char)
+			return RetString
+		
+		public String PadRight(int totalWidth, char paddingChar)
+			if m_Length >= totalWidth
+				return this
+			
+			var RetString = new String(totalWidth)
+			for var i in m_Length .. totalWidth
+				RetString.m_Chars[i] = paddingChar
+				
+			Memory.Copy RetString.m_Chars to char*, m_Chars to char*, m_Length * sizeof(char)
+			return RetString
+		
+		public String PadLeft(int totalWidth)
+			return PadLeft(totalWidth, ' ')
+			
+		public String PadRight(int totalWidth)
+			return PadRight(totalWidth, ' ')
+			
+		bool Equals(String value, int index)
+			for var i in 0 .. value.m_Length
+				if m_Chars[i + index] != value.m_Chars[i]
+					return false
+		
+			return true
+			
+		public bool Equals(String value)
+			if value === null or m_Length != value.m_Length
+				return false
+			
+			return Equals(value, 0)
+		
+		public static bool Equals(String A, B)
+			if (A === null) != (B === null): return false
+			return A === null or A.Equals(B)
+			
+		public static int Compare(String A, B, bool ignoreCase)
+			if A == null: throw new ArgumentNullException("A")
+			if B == null: throw new ArgumentNullException("B")
+			if not ignoreCase: return Compare(A, B)
+		
+			var MinSize = Math.Min(A.m_Length, B.m_Length)
+			for var i in 0 .. MinSize
+				var CharA = char.ToLower(A.m_Chars[i])
+				var CharB = char.ToLower(B.m_Chars[i])
+				if CharA < CharB: return -1
+				if CharA > CharB: return 1
+				
+			if A.m_Length < B.m_Length: return -1
+			if A.m_Length > B.m_Length: return 1
+			return 0
+			
+		public static int Compare(String A, B)
+			if A === null: throw new ArgumentNullException("A")
+			if B === null: throw new ArgumentNullException("B")
+			
+			var MinSize = Math.Min(A.m_Length, B.m_Length)
+			for var i in 0 .. MinSize
+				if A.m_Chars[i] < B.m_Chars[i]: return -1
+				if A.m_Chars[i] > B.m_Chars[i]: return 1
+				
+			if A.m_Length < B.m_Length: return -1
+			if A.m_Length > B.m_Length: return 1
+			return 0
+			
+		public bool Contains(String value)
+			if value === null: throw new ArgumentNullException("value")
+			if value.m_Length > m_Length: return false
+			
+			for var i in 0 .. m_Length - value.m_Length
+				if Equals(value, i): return true
+				
+			return false
+		
+		public bool StartsWith(String value)
+			if value === null: throw new ArgumentNullException("value")
+			return m_Length >= value.m_Length and Equals(value, 0)
+		
+		public bool EndsWith(String value)
+			if value === null: throw new ArgumentNullException("value")
+			return m_Length >= value.m_Length and Equals(value, m_Length - value.m_Length)
+			
+		public String ToLower()
+			var RetString = new string(m_Length)
+			for var i in 0 .. m_Length
+				RetString.m_Chars[i] = char.ToLower(m_Chars[i])
+				
+			return RetString
+			
+		public String ToUpper()
+			var RetString = new string(m_Length)
+			for var i in 0 .. m_Length
+				RetString.m_Chars[i] = char.ToUpper(m_Chars[i])
+				
+			return RetString
+			
+        public int LeftWhiteSpaces:
+			get
+				for var i in 0 .. Length
+                    if not char.IsWhiteSpace(m_Chars[i])
+                        return i
+						
+                return Length
+					
+        public int RightWhiteSpaces:
+			get
+				for var i in Length - 1 ... 0 step -1
+                    if not char.IsWhiteSpace(m_Chars[i])
+                        return Length - 1 - i
+						
+                return Length
+					
+        public string Trim()
+            var i = LeftWhiteSpaces
+            if i == Length: return ""
+
+            var j = RightWhiteSpaces
+            return Substring(i, Length - i - j)
+
+        public string TrimEnd()
+            var j = RightWhiteSpaces
+            if j == Length: return ""
+            return Substring(0, Length - j)
+
+        public string TrimStart()
+            var i = LeftWhiteSpaces
+            if i == Length: return ""
+            return Substring(i, Length - i)
+
+		public static bool operator ==(string A, B)
+			return Equals(A, B)
+			
+		public static bool operator !=(string A, B)
+			return not Equals(A, B)
+			
+		public static bool IsNullOrEmpty(string value)
+			return value === null or value.m_Length == 0
+			
+		public static bool IsNullOrWhiteSpace(string value)
+			if value === null: return true
+			
+			for var i in 0 .. value.m_Length
+				if not char.IsWhiteSpace(value.m_Chars[i]): return false
+				
+			return true
+			
+		public static String Format(string format, params object[] args)
+			if format === null: throw new ArgumentNullException("format")
+			if args === null: throw new ArgumentNullException("args")
+			
+			var RetValue = ""
+			var LastEnd = 0
+			
+			for var i in 0 .. format.Length
+				if format.m_Chars[i] == '{'
+					var EndPos = format.IndexOf('}', i + 1)
+					if EndPos == -1: throw new FormatException()
+					
+					RetValue += format.Substring(LastEnd, i - LastEnd)
+					var Substring = format.Substring(i + 1, EndPos - i - 1)
+					var Index = Convert.ToInt32(Substring)
+					if Index < 0 or Index >= args.Length: throw new FormatException()
+					if args[Index] != null: RetValue += args[Index].ToString()
+					LastEnd = EndPos + 1
+					
+			RetValue += format.Substring(LastEnd)
+			return RetValue
+			
+		public static String Format(string format, object arg0)
+			return Format(format, (new[]: arg0))
+			
+		public static String Format(string format, object arg0, arg1)
+			return Format(format, (new[]: arg0, arg1))
+			
+		public static String Format(string format, object arg0, arg1, arg2)
+			return Format(format, (new[]: arg0, arg1, arg2))
+			
+		public char* ToWString()
+			return StringHelper.ToWString((m_Chars, (m_Length to uint_ptr)))
+			
+		public byte* ToCString()
+			return StringHelper.ToCString((m_Chars, (m_Length to uint_ptr)))
+			
+		public byte* ToUTF8String()
+			return StringHelper.ToUTF8String((m_Chars, (m_Length to uint_ptr)))

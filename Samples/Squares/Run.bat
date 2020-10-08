@@ -1,0 +1,1 @@
+@..\..\Binaries\Zinnia.exe -x -entry SquaresSample.Main Squares.zinnia

@@ -1,0 +1,4 @@
+namespace Internals.Debug
+	public static class Debug
+		public extern static cdecl asmname("_bb_DebugPrintString") void Print(string Value)
+		public extern static cdecl asmname("_bb_DebugPrintInt") void Print(int Value)

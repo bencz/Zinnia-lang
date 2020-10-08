@@ -1,0 +1,42 @@
+using Internals
+using System.IO
+
+namespace System
+    public static class StandardC
+        public static extern cdecl asmname("_exit") void exit(int ExitCode)
+        public static extern cdecl asmname("_fgetws") char* fgetws(char* str, int n, Handle Stream)
+		public static extern cdecl asmname("_wprintf") void wprintf(char* Str)
+		public static extern cdecl asmname("_printf") void printf(byte* Str)
+		public static extern cdecl asmname("_wcslen") uint_ptr wcslen(char* Str)
+		
+		public static extern cdecl asmname("_fopen") Handle fopen(byte* FileName, Mode)
+		public static extern cdecl asmname("_fread") uint_ptr fread(void* Ptr, uint_ptr Size, Count, Handle Handle)
+		public static extern cdecl asmname("_fwrite") uint_ptr fwrite(void* Ptr, uint_ptr Size, Count, Handle Handle)
+		public static extern cdecl asmname("_fflush") int fflush(Handle Handle)
+		public static extern cdecl asmname("_ftell") int ftell(Handle Handle)
+		public static extern cdecl asmname("_fseek") int fseek(Handle Handle, int Position, SeekOrigin Origin)
+		public static extern cdecl asmname("_fclose") int fclose(Handle Handle)
+		public static extern cdecl asmname("_fgetpos") int fgetpos(Handle Handle, out long Position)
+		public static extern cdecl asmname("_fsetpos") int fsetpos(Handle Handle, ref long Position)
+		
+		public static void wprintf(char[*] Str)
+			var Mem = StringHelper.ToWString(Str)
+			wprintf Mem
+			Memory.Free Mem
+			
+		public static Handle fopen(string FileName, Mode)
+			var NameMem = FileName.ToUTF8String()
+			var ModeMem = Mode.ToUTF8String()
+			var Ret = fopen(NameMem, ModeMem)
+			Memory.Free NameMem
+			Memory.Free ModeMem
+			return Ret
+			
+		public static extern Handle stdin:
+			get
+			
+		public static extern Handle stdout:
+			get
+			
+		public static extern Handle stderr:
+			get

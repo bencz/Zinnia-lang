@@ -1,0 +1,1 @@
+@..\..\Binaries\Zinnia.exe -x Fire.cpp ..\CppMain.zinnia

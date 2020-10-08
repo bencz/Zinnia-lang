@@ -1,0 +1,78 @@
+using System
+using BlitzMax
+
+namespace FireSample
+    const var
+        WindowSize = (1024, 768),
+        ImageSize = (560, 420),
+        RectSize = 80,
+        ColorNumber = 768
+              
+    float[ImageSize.0, ImageSize.1] Array
+    int[ColorNumber] Colors
+
+    int ArgbColor(byte a, r, g, b)
+        return (a to int) << 24 | (r to int) << 16 | (g to int) << 8 | b
+
+	byte Clamp(int x)
+        if x < 0: x = 0
+        if x > 255: x = 255
+        return x to byte
+		
+    float GetDistance(float2 P1, P2)
+        var x = P1.x - P2.x, y = P1.y - P2.y
+        return Math.Sqrt(x * x + y * y) to float
+              
+    float GetValue(int x, y)
+        if 0 <= x < ImageSize.0 and 0 <= y < ImageSize.1
+            return Array[x, y]
+            
+        return 0f
+        
+    void UpdateValues()
+        for var x, y in 0 .. ImageSize
+            var Value = Array[x, y] * 5
+            Value += GetValue(x + 1, y + 1) * 0.5
+            Value += GetValue(x - 1, y + 1) * 0.75
+            Value += GetValue(x - 2, y + 2) * 0.5
+            Value += GetValue(x - 3, y + 3) * 0.25
+            Array[x, y] = Value / 7.1
+
+		var RMouse = GetMousePosition()
+		var Mouse = (RMouse to float2) * ImageSize / WindowSize
+        var P1 = Math.Max((Mouse to int2) - RectSize, 0)
+		var P2 = Math.Min((Mouse to int2) + RectSize, ImageSize - 1)
+		
+        for var x, y in P1 .. P2
+            var Dist = 1 - GetDistance(Mouse, (x, y)) / RectSize
+            if Dist >= 0f: Array[x, y] = Math.Min(Array[x, y] + Dist / 10f, 1)
+
+    void UpdateImage(Handle Image)
+        var Pixmap = LockImage(Image)
+        for var x, y in 0 .. ImageSize
+            var Color = Array[x, y] * (ColorNumber - 1) to int
+            WritePixel Pixmap, x, y, Colors[Color]
+		
+        UnlockImage Image
+		
+    void Initialize()
+        for var i in 0 .. ColorNumber
+            var Value = (i to float) / (ColorNumber - 1)
+            var Red = (Math.Min(Value, 1f / 3)) * 3 * 255 to int
+            var Green = (Math.Min(Value, 1.65f / 3) - 0.65f / 3) * 3 * 255 to int
+            var Blue = (Math.Min(Value, 1f) - 2f / 3) * 3 * 255 to int
+			
+            Colors[i] = ArgbColor(255, Clamp(Red), Clamp(Green), Clamp(Blue))
+     
+    void Main()
+        Initialize
+        Graphics WindowSize
+        
+        var Image = CreateImage(ImageSize)
+        while not KeyHit(Keys.Escape) and not AppTerminate()
+            Cls
+            UpdateValues
+            UpdateImage Image
+            DrawImageRect Image, 0, WindowSize
+            DrawFrameStats
+            Flip

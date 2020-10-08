@@ -1,0 +1,98 @@
+using System
+using Internals
+using Internals.Reflection
+
+namespace System
+	public nobase class Object
+		internal void* _objFunctionTable
+		internal IDENTIFIER_PTR _objTypePointer
+		internal ObjectFlags _objFlags
+		internal int _objRefCount
+		
+		public static bool ReferenceEquals(object objA, objB)
+			return objA === objB
+			
+		public virtual string ToString()
+			return Reflection.GetFullName(_objTypePointer)
+
+namespace Internals
+	public flag ObjectFlags : byte
+		None = 0
+		DoNotDelete = 1
+		
+	public static class ObjectHelper
+		public static IDENTIFIER_PTR GetClass(object Obj)
+			return Obj._objTypePointer
+		
+		static bool IsValueType(IDENTIFIER_PTR Class)
+			return Class == id_desc_ptr(ValueType) or Class == id_desc_ptr(Enum) or 
+				Class == id_desc_ptr(Tuple)
+		
+		public static IDENTIFIER_PTR GetType(object Obj)
+			var Class = Obj._objTypePointer
+			if Class == id_desc_ptr(Array): return reinterpret_cast<Array>(Obj).ArrayType
+			if IsValueType(Class): return reinterpret_cast<ValueType>(Obj).BoxedType
+			return Class
+		
+		public static void Unbox(object Obj, void* Dst, IDENTIFIER_PTR Type)
+			if not IsValueType(Obj._objTypePointer)
+				throw new InvalidCastException()
+				
+			reinterpret_cast<ValueType>(Obj).Unbox Dst, Type
+	
+		public static object Cast(object Obj, IDENTIFIER_PTR Id)
+			if not ObjectIs(Obj, Id)
+				throw new InvalidCastException()
+				
+			return Obj
+	
+		public static object ObjectAs(object Obj, IDENTIFIER_PTR Id)
+			if ObjectIs(Obj, Id): return Obj
+			else return null
+			
+		public static bool ObjectIs(object Obj, IDENTIFIER_PTR Id)
+			var DeclData = Reflection.ReadDeclaredId(Id, ReadDeclaredIdFlags.DontReadFreeable)
+			if DeclData.Type == DeclaredIdType.Alias
+				var RealId = Reflection.GetRealId(DeclData.BaseUndeclaredId)
+				var UndeclData = Reflection.ReadUndeclaredId(RealId)
+				DeclData.Free
+				
+				if UndeclData.Type == UndeclaredIdType.Unknown
+					UndeclData.Free
+					return ObjectIsFast(Obj, UndeclData.DeclaredId)
+					
+				else if UndeclData.Type == UndeclaredIdType.RefArrayType
+					if Obj._objTypePointer == id_desc_ptr(Array)
+						var Arr = reinterpret_cast<Array>(Obj)
+						return Reflection.IsEquivalent(RealId, Arr.ArrayType)
+					
+				return false
+			else
+				DeclData.Free
+				return ObjectIsFast(Obj, Id)
+	
+		public static object CastFast(object Obj, IDENTIFIER_PTR Id)
+			if not ObjectIsFast(Obj, Id)
+				throw new InvalidCastException()
+				
+			return Obj
+	
+		public static object ObjectAsFast(object Obj, IDENTIFIER_PTR Id)
+			if ObjectIsFast(Obj, Id): return Obj
+			else return null
+			
+		public static bool ObjectIsFast(object Obj, IDENTIFIER_PTR Id)
+			var Class = Obj._objTypePointer
+			if Class == Id or Reflection.IsSubtypeOf(Class, Id)
+				return true
+			
+			if IsValueType(Class)
+				var b = reinterpret_cast<ValueType>(Obj)
+				return b.BoxedType == Id or Reflection.IsSubtypeOf(b.BoxedType, Id)
+				
+			return false
+
+		public static void* Allocate(int Size)
+			var Ret = Memory.Allocate(Size)
+			Memory.Zero Ret, Size
+			return Ret

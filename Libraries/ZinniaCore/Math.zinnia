@@ -1,0 +1,709 @@
+using Internals
+
+namespace System
+    public static class Math
+        public const var E = 2.71828182845904523536d
+        public const var PI = 3.14159265358979323846d
+        public const var NaN = 0d / 0d
+        public const var Infinite = 1d / 0d
+
+        public static double IEEERemainder(double x, y)
+            return x - (y * Math.Round(x / y))
+			
+		public static int4 Clamp(int4 x, min, max)
+			return Min(Max(x, min), max)
+		
+		public static uint4 Clamp(uint4 x, min, max)
+			return Min(Max(x, min), max)
+			
+		public static float4 Clamp(float4 x, min, max)
+			return Min(Max(x, min), max)
+			
+		public static double4 Clamp(double4 x, min, max)
+			return Min(Max(x, min), max)
+			
+		public static int3 Clamp(int3 x, min, max)
+			return Min(Max(x, min), max)
+		
+		public static uint3 Clamp(uint3 x, min, max)
+			return Min(Max(x, min), max)
+			
+		public static float3 Clamp(float3 x, min, max)
+			return Min(Max(x, min), max)
+			
+		public static double3 Clamp(double3 x, min, max)
+			return Min(Max(x, min), max)
+			
+		public static int2 Clamp(int2 x, min, max)
+			return Min(Max(x, min), max)
+		
+		public static uint2 Clamp(uint2 x, min, max)
+			return Min(Max(x, min), max)
+			
+		public static float2 Clamp(float2 x, min, max)
+			return Min(Max(x, min), max)
+			
+		public static double2 Clamp(double2 x, min, max)
+			return Min(Max(x, min), max)
+			
+		public static sbyte Clamp(sbyte x, min, max)
+			return Min(Max(x, min), max)
+		
+		public static byte Clamp(byte x, min, max)
+			return Min(Max(x, min), max)
+		
+		public static short Clamp(short x, min, max)
+			return Min(Max(x, min), max)
+		
+		public static ushort Clamp(ushort x, min, max)
+			return Min(Max(x, min), max)
+		
+		public static int Clamp(int x, min, max)
+			return Min(Max(x, min), max)
+		
+		public static uint Clamp(uint x, min, max)
+			return Min(Max(x, min), max)
+		
+		public static long Clamp(long x, min, max)
+			return Min(Max(x, min), max)
+		
+		public static ulong Clamp(ulong x, min, max)
+			return Min(Max(x, min), max)
+		
+		public static float Clamp(float x, min, max)
+			return Min(Max(x, min), max)
+		
+		public static double Clamp(double x, min, max)
+			return Min(Max(x, min), max)
+		
+		public static float3 Cross(float3 a, b)
+		    return a.y * b.z - a.z * b.y,
+				a.z * b.x - a.x * b.z,
+				a.x * b.y - a.y * b.x
+				
+		public static double3 Cross(double3 a, b)
+		    return a.y * b.z - a.z * b.y,
+				a.z * b.x - a.x * b.z,
+				a.x * b.y - a.y * b.x 
+				
+		public static float Dot(float4 a, b)
+			return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w
+		
+		public static double Dot(double4 a, b)
+			return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w
+		
+		public static float Dot(float3 a, b)
+			return a.x * b.x + a.y * b.y + a.z * b.z
+		
+		public static double Dot(double3 a, b)
+			return a.x * b.x + a.y * b.y + a.z * b.z
+		
+		public static float Dot(float2 a, b)
+			return a.x * b.x + a.y * b.y
+		
+		public static double Dot(double2 a, b)
+			return a.x * b.x + a.y * b.y
+		
+		public static int4 Max(int4 a, b)
+			return Max(a.x, b.x), Max(a.y, b.y), Max(a.z, b.z), Max(a.w, b.w)
+			
+		public static int4 Min(int4 a, b)
+			return Min(a.x, b.x), Min(a.y, b.y), Min(a.z, b.z), Min(a.w, b.w)
+			
+		public static uint4 Max(uint4 a, b)
+			return Max(a.x, b.x), Max(a.y, b.y), Max(a.z, b.z), Max(a.w, b.w)
+			
+		public static uint4 Min(uint4 a, b)
+			return Min(a.x, b.x), Min(a.y, b.y), Min(a.z, b.z), Min(a.w, b.w)
+			
+		public static float4 Max(float4 a, b)
+			return Max(a.x, b.x), Max(a.y, b.y), Max(a.z, b.z), Max(a.w, b.w)
+			
+		public static float4 Min(float4 a, b)
+			return Min(a.x, b.x), Min(a.y, b.y), Min(a.z, b.z), Min(a.w, b.w)
+			
+		public static double4 Max(double4 a, b)
+			return Max(a.x, b.x), Max(a.y, b.y), Max(a.z, b.z), Max(a.w, b.w)
+			
+		public static double4 Min(double4 a, b)
+			return Min(a.x, b.x), Min(a.y, b.y), Min(a.z, b.z), Min(a.w, b.w)
+			
+		public static int3 Max(int3 a, b)
+			return Max(a.x, b.x), Max(a.y, b.y), Max(a.z, b.z)
+			
+		public static int3 Min(int3 a, b)
+			return Min(a.x, b.x), Min(a.y, b.y), Min(a.z, b.z)
+			
+		public static uint3 Max(uint3 a, b)
+			return Max(a.x, b.x), Max(a.y, b.y), Max(a.z, b.z)
+			
+		public static uint3 Min(uint3 a, b)
+			return Min(a.x, b.x), Min(a.y, b.y), Min(a.z, b.z)
+			
+		public static float3 Max(float3 a, b)
+			return Max(a.x, b.x), Max(a.y, b.y), Max(a.z, b.z)
+			
+		public static float3 Min(float3 a, b)
+			return Min(a.x, b.x), Min(a.y, b.y), Min(a.z, b.z)
+			
+		public static double3 Max(double3 a, b)
+			return Max(a.x, b.x), Max(a.y, b.y), Max(a.z, b.z)
+			
+		public static double3 Min(double3 a, b)
+			return Min(a.x, b.x), Min(a.y, b.y), Min(a.z, b.z)
+						
+		public static int2 Max(int2 a, b)
+			return Max(a.x, b.x), Max(a.y, b.y)
+			
+		public static int2 Min(int2 a, b)
+			return Min(a.x, b.x), Min(a.y, b.y)
+			
+		public static uint2 Max(uint2 a, b)
+			return Max(a.x, b.x), Max(a.y, b.y)
+			
+		public static uint2 Min(uint2 a, b)
+			return Min(a.x, b.x), Min(a.y, b.y)
+			
+		public static float2 Max(float2 a, b)
+			return Max(a.x, b.x), Max(a.y, b.y)
+			
+		public static float2 Min(float2 a, b)
+			return Min(a.x, b.x), Min(a.y, b.y)
+			
+		public static double2 Max(double2 a, b)
+			return Max(a.x, b.x), Max(a.y, b.y)
+			
+		public static double2 Min(double2 a, b)
+			return Min(a.x, b.x), Min(a.y, b.y)
+			
+        public static byte Max(byte a, b)
+            return if a > b: a else b
+        
+        public static byte Min(byte a, b)
+            return if a < b: a else b
+            
+        public static sbyte Max(sbyte a, b)
+            return if a > b: a else b
+        
+        public static sbyte Min(sbyte a, b)
+            return if a < b: a else b
+            
+        public static short Max(short a, b)
+            return if a > b: a else b
+        
+        public static short Min(short a, b)
+            return if a < b: a else b
+            
+        public static ushort Max(ushort a, b)
+            return if a > b: a else b
+        
+        public static ushort Min(ushort a, b)
+            return if a < b: a else b
+            
+        public static int Max(int a, b)
+            return if a > b: a else b
+        
+        public static int Min(int a, b)
+            return if a < b: a else b
+            
+        public static uint Max(uint a, b)
+            return if a > b: a else b
+        
+        public static uint Min(uint a, b)
+            return if a < b: a else b
+            
+        public static long Max(long a, b)
+            return if a > b: a else b
+        
+        public static long Min(long a, b)
+            return if a < b: a else b
+            
+        public static ulong Max(ulong a, b)
+            return if a > b: a else b
+        
+        public static ulong Min(ulong a, b)
+            return if a < b: a else b
+            
+        public static float Max(float a, b)
+            return if a > b: a else b
+        
+        public static float Min(float a, b)
+            return if a < b: a else b
+            
+        public static double Max(double a, b)
+            return if a > b: a else b
+        
+        public static double Min(double a, b)
+            return if a < b: a else b
+            
+		public static int4 Sign(int4 x)
+			return Sign(x.x), Sign(x.y), Sign(x.z), Sign(x.w)
+			
+		public static float4 Sign(float4 x)
+			return Sign(x.x), Sign(x.y), Sign(x.z), Sign(x.w)
+			
+		public static double4 Sign(double4 x)
+			return Sign(x.x), Sign(x.y), Sign(x.z), Sign(x.w)
+			
+		public static int3 Sign(int3 x)
+			return Sign(x.x), Sign(x.y), Sign(x.z)
+			
+		public static float3 Sign(float3 x)
+			return Sign(x.x), Sign(x.y), Sign(x.z)
+			
+		public static double3 Sign(double3 x)
+			return Sign(x.x), Sign(x.y), Sign(x.z)
+			
+		public static int2 Sign(int2 x)
+			return Sign(x.x), Sign(x.y)
+			
+		public static float2 Sign(float2 x)
+			return Sign(x.x), Sign(x.y)
+			
+		public static double2 Sign(double2 x)
+			return Sign(x.x), Sign(x.y)
+			
+        public static double Sign(double x)
+            if x > 0: return 1
+            else if x < 0: return -1
+            else return 0
+            
+        public static float Sign(float x)
+            if x > 0: return 1
+            else if x < 0: return -1
+            else return 0
+            
+        public static int Sign(int x)
+            if x > 0: return 1
+            else if x < 0: return -1
+            else return 0
+            
+        public static long Sign(long x)
+            if x > 0: return 1
+            else if x < 0: return -1
+            else return 0
+            
+        public static short Sign(short x)
+            if x > 0: return 1
+            else if x < 0: return -1
+            else return 0
+            
+        public static sbyte Sign(sbyte x)
+            if x > 0: return 1
+            else if x < 0: return -1
+            else return 0
+            
+        public static float Abs(float x)
+            return if x < 0: -x else x
+        
+        public static double Abs(double x)
+            return if x < 0: -x else x
+        
+        public static int Abs(int x)
+            return if x < 0: -x else x
+
+        public static long Abs(long x)
+            return if x < 0: -x else x
+
+        public static short Abs(short x)
+            return if x < 0: -x else x
+
+        public static sbyte Abs(sbyte x)
+            return if x < 0: -x else x
+			
+		public static int4 Abs(int4 x)
+			return Abs(x.x), Abs(x.y), Abs(x.z), Abs(x.w)
+            
+		public static float4 Abs(float4 x)
+			return Abs(x.x), Abs(x.y), Abs(x.z), Abs(x.w)
+			
+		public static double4 Abs(double4 x)
+			return Abs(x.x), Abs(x.y), Abs(x.z), Abs(x.w)
+			
+		public static int3 Abs(int3 x)
+			return Abs(x.x), Abs(x.y), Abs(x.z)
+            
+		public static float3 Abs(float3 x)
+			return Abs(x.x), Abs(x.y), Abs(x.z)
+			
+		public static double3 Abs(double3 x)
+			return Abs(x.x), Abs(x.y), Abs(x.z)
+			
+		public static int2 Abs(int2 x)
+			return Abs(x.x), Abs(x.y)
+            
+		public static float2 Abs(float2 x)
+			return Abs(x.x), Abs(x.y)
+			
+		public static double2 Abs(double2 x)
+			return Abs(x.x), Abs(x.y)
+			
+#if FP_MODE == "FPU"
+
+        public static asm double Atan(double x)
+            fld qword[esp + 4]
+            fld1
+            fpatan
+            ret 8
+            
+        public static asm double Atan2(double x, y)
+            fld qword[esp + 4]
+            fld qword[esp + 12]
+            fpatan
+            ret 16
+
+        public static asm double Tan(double x)
+            fld qword[esp + 4]
+            fld1
+            fptan
+            ffree st0
+            fincstp
+            ret 16
+            
+        public static asm double Sqrt(double x)
+            fld qword[esp + 4]
+            fsqrt
+            ret 8
+            
+        public static asm double Sin(double x)
+            fld qword[esp + 4]
+            fsin
+            ret 8
+        
+        public static asm double Cos(double x)
+            fld qword[esp + 4]
+            fcos
+            ret 8
+            
+        public static asm double Round(double x)
+            fldcw $[_x86Helper.RoundToNearestFPUControlWord]
+            fld qword[esp + 4]
+            frndint
+            fldcw $[_x86Helper.DefaultFPUControlWord]
+            ret 8
+        
+        public static asm double Floor(double x)
+            fldcw $[_x86Helper.RoundDownFPUControlWord]
+            fld qword[esp + 4]
+            frndint
+            fldcw $[_x86Helper.DefaultFPUControlWord]
+            ret 8
+        
+        public static asm double Ceiling(double x)
+            fldcw $[_x86Helper.RoundUpFPUControlWord]
+            fld qword[esp + 4]
+            frndint
+            fldcw $[_x86Helper.DefaultFPUControlWord]
+            ret 8
+        
+        public static asm double Truncate(double x)
+            fldcw $[_x86Helper.TruncateFPUControlWord]
+            fld qword[esp + 4]
+            frndint
+            fldcw $[_x86Helper.DefaultFPUControlWord]
+            ret 8
+        
+        public static asm bool IsNaN(double x)
+            fld qword[esp + 4]
+            fcomp st0
+            fstsw ax
+            sahf
+            setp al
+            ret 8
+            
+#elif FP_MODE == "SSE"
+
+        public static asm double Atan(double x)
+            movsd qword[esp - 8], xmm0
+            fld qword[esp - 8]
+            fld1
+            fpatan
+            fstp qword[esp - 8]
+            movsd xmm0, qword[esp - 8]
+            ret
+            
+        public static asm double Atan2(double x, y)
+            movsd qword[esp - 8], xmm0
+            movsd qword[esp - 16], xmm1
+            fld qword[esp - 8]
+            fld qword[esp - 16]
+            fpatan
+            fstp qword[esp - 8]
+            movsd xmm0, qword[esp - 8]
+            ret
+
+        public static asm double Tan(double x)
+            movsd qword[esp - 8], xmm0
+            fld qword[esp - 8]
+            fld1
+            fptan
+            ffree st0
+            fincstp
+            fstp qword[esp - 8]
+            movsd xmm0, qword[esp - 8]
+            ret
+            
+        public static asm double Sin(double x)
+            movsd qword[esp - 8], xmm0
+            fld qword[esp - 8]
+            fsin
+            fstp qword[esp - 8]
+            movsd xmm0, qword[esp - 8]
+            ret
+        
+        public static asm double Cos(double x)
+            movsd qword[esp - 8], xmm0
+            fld qword[esp - 8]
+            fcos
+            fstp qword[esp - 8]
+            movsd xmm0, qword[esp - 8]
+            ret
+            
+        public static asm double Sqrt(double x)
+            sqrtsd xmm0, xmm0
+            ret
+
+        public static asm double Round(double x)
+            ldmxcsr $[_x86Helper.RoundToNearestMXCSR]
+            cvtsd2si eax, xmm0
+            cvtsi2sd xmm0, eax
+            ldmxcsr $[_x86Helper.DefaultMXCSR]
+            ret
+        
+        public static asm double Floor(double x)
+            ldmxcsr $[_x86Helper.RoundDownMXCSR]
+            cvtsd2si eax, xmm0
+            cvtsi2sd xmm0, eax
+            ldmxcsr $[_x86Helper.DefaultMXCSR]
+            ret
+        
+        public static asm double Ceiling(double x)
+            ldmxcsr $[_x86Helper.RoundUpMXCSR]
+            cvtsd2si eax, xmm0
+            cvtsi2sd xmm0, eax
+            ldmxcsr $[_x86Helper.DefaultMXCSR]
+            ret
+        
+        public static asm double Truncate(double x)
+            ldmxcsr $[_x86Helper.TruncateMXCSR]
+            cvtsd2si eax, xmm0
+            cvtsi2sd xmm0, eax
+            ldmxcsr $[_x86Helper.DefaultMXCSR]
+            ret
+        
+        public static asm bool IsNaN(double x)
+            ucomisd xmm0, xmm0
+            setp al
+            ret
+            
+#else
+#error Unkown FP_MODE
+#endif
+
+        public static bool IsInfinite(double x)
+            return Abs(x) == Infinite
+            
+        static double _Pow_Hlp(double x, double y)
+            var Ret = 1d
+            var Absy = Abs(y)
+            
+            while Absy > 0
+                if y >= 0: repeat Absy to uint: Ret *= x
+                else repeat Absy to uint: Ret /= x
+                Absy -= $FFFFFFFFd
+                
+            return Ret
+
+        static double _Pow_Hlp(double x, int y)
+            var Ret = 1d
+            if y >= 0: repeat y: Ret *= x
+            else repeat -y: Ret /= x
+            return Ret
+
+        public static double Pow2(double x)
+            var Ret = _Pow_Hlp(2, x)
+            var xMod1 = x % 1d
+            if x < 0d and xMod1 != 0d
+                return NaN
+            
+            if xMod1 != 0d: Ret *= _x86Helper.f2x(xMod1)
+            return Ret
+            
+        public static double Pow(double x, y)
+            var Ret = _Pow_Hlp(x, y)
+            var xMod1 = x % 1d
+            if x < 0d and xMod1 != 0d
+                return NaN
+                
+            if xMod1 != 0: Ret *= Pow2(y * Log2(x))
+            return Ret
+            
+        public static double Exp(double x)
+            return Pow(E, x)
+            
+        public static double Log(double x)
+            return _x86Helper.fyl2x(x, 0.69314720160934252d)
+            
+        public static double Log2(double x)
+            return _x86Helper.fl2x(x)
+            
+        public static double Log10(double x)
+            return _x86Helper.fyl2x(x, 0.30102999566398120d)
+            
+        public static double Log(double x, b)
+            return _x86Helper.fl2x(x) / _x86Helper.fl2x(b)
+            
+        public static double Asin(double x)
+            return 2 * Atan(x / (1 + Sqrt(1 - x * x)))
+            
+        public static double Acos(double x)
+            return 2 * Atan(Sqrt(1 - x * x) / (1 + x))
+            
+        public static double Sinh(double x)
+            x = x % (2 * PI)
+            return (Exp(x) - Exp(-x)) / 2
+            
+        public static double Cosh(double x)
+            x = x % (2 * PI)
+            return (Exp(x) + Exp(-x)) / 2
+            
+        public static double Tanh(double x)
+            x = x % (2 * PI)
+            var exp2x = Exp(2 * x)
+            return (exp2x - 1) / (exp2x + 1)
+            
+        public static double Asinh(double x)
+            return Log(x + Sqrt(x * x + 1))
+            
+        public static double Acosh(double x)
+            return Log(x + Sqrt(x * x - 1))
+            
+        public static double Atanh(double x)
+            return 0.5d * Log((1 + x) / (1 - x))
+
+        const var DP1 = 7.85398125648498535156e-1
+        const var DP2 = 3.77489470793079817668e-8
+        const var DP3 = 2.69515142907905952645e-15
+            
+        public static double CephesSin(double x)
+            if x == 0d: return 0d
+            if IsNaN(x) or IsInfinite(x): return NaN
+
+            var Sign = 1
+            if x < 0: x = -x; Sign = -1
+            if x > 1.073741824e9: return 0
+            
+            var y = x / (PI / 4) to int to double
+            var z = y / 16d to int to double
+            z = y - z * 16d
+            
+            var j = z to int
+            if j & 1 != 0: j++; y++
+            
+            j &= 7
+            if j > 3: Sign = -Sign; j -= 4
+            z = ((x - y * DP1) - y * DP2) - y * DP3
+            
+            var zz = z * z
+            if j == 1 or j == 2
+                y = 1d - zz / 2d + zz * zz * (((((-1.13585365213876817300e-11 * zz + 2.08757008419747316778e-9) * zz - 2.75573141792967388112e-7) * zz + 2.48015872888517045348e-5) * zz - 1.38888888888730564116e-3) * zz + 4.16666666666665929218e-2)
+            else 
+                y = z + z * zz * (((((1.58962301576546568060e-10 * zz - 2.50507477628578072866e-8) * zz + 2.75573136213857245213e-6) * zz - 1.98412698295895385996e-4) * zz + 8.33333333332211858878e-3) * zz - 1.66666666666666307295e-1)
+                
+            return if Sign < 0: -y else y
+            
+        public static double CephesCos(double x)
+            if IsNaN(x) or IsInfinite(x): return NaN
+
+            var Sign = 1
+            if x < 0: x = -x;
+            if x > 1.073741824e9: return 0
+            
+            var y = x / (PI / 4) to int to double
+            var z = y / 16d to int to double
+            z = y - z * 16d
+            
+            var j = z to int
+            if j & 1 != 0: j++; y++
+            
+            j &= 7
+            if j > 3: Sign = -Sign; j -= 4
+            if j > 1: Sign = -Sign
+            z = ((x - y * DP1) - y * DP2) - y * DP3
+            
+            var zz = z * z
+            if j == 1 or j == 2
+                y = z + z * zz * (((((1.58962301576546568060e-10 * zz - 2.50507477628578072866e-8) * zz + 2.75573136213857245213e-6) * zz - 1.98412698295895385996e-4) * zz + 8.33333333332211858878e-3) * zz - 1.66666666666666307295e-1)
+            else 
+                y = 1d - zz / 2d + zz * zz * (((((-1.13585365213876817300e-11 * zz + 2.08757008419747316778e-9) * zz - 2.75573141792967388112e-7) * zz + 2.48015872888517045348e-5) * zz - 1.38888888888730564116e-3) * zz + 4.16666666666665929218e-2)
+                
+            return if Sign < 0: -y else y
+           
+/*
+        const var DP1 = 7.85398125648498535156e-1
+        const var DP2 = 3.77489470793079817668e-8
+        const var DP3 = 2.69515142907905952645e-15
+            
+        public static double CephesSinCosHelper(double z, bool Sin)
+            var zz = z * z
+            if not Sin
+                var y = -1.13585365213876817300e-11 * zz
+                y = (y + 2.08757008419747316778e-9) * zz
+                y = (y - 2.75573141792967388112e-7) * zz
+                y = (y + 2.48015872888517045348e-5) * zz
+                y = (y - 1.38888888888730564116e-3) * zz
+                y = (y + 4.16666666666665929218e-2)
+                return 1d - zz / 2d + zz * zz * y
+            else 
+                var y = 1.58962301576546568060e-10 * zz
+                y = (y - 2.50507477628578072866e-8) * zz
+                y = (y + 2.75573136213857245213e-6) * zz
+                y = (y - 1.98412698295895385996e-4) * zz
+                y = (y + 8.33333333332211858878e-3) * zz
+                y = (y - 1.66666666666666307295e-1)
+                return z + z * zz * y
+            
+        public static double CephesSin(double x)
+            if x == 0d: return 0d
+            if IsNaN(x) or IsInfinite(x): return NaN
+
+            var Sign = 1
+            if x < 0: x = -x; Sign = -1
+            if x > 1.073741824e9: return 0
+            
+            var y = Floor(x / (PI / 4))
+            var z = Floor(y / 16d)
+            z = y - z * 16d
+            
+            var j = (long)z
+            if j & 1 != 0: j++; y++
+            
+            j &= 7
+            if j > 3: Sign = -Sign; j -= 4
+            z = ((x - y * DP1) - y * DP2) - y * DP3
+            
+            y = CephesSinCosHelper(z, j != 1 and j != 2)
+            return if Sign < 0: -y else y
+            
+        public static double CephesCos(double x)
+            if IsNaN(x) or IsInfinite(x): return NaN
+
+            var Sign = 1
+            if x < 0: x = -x;
+            if x > 1.073741824e9: return 0
+            
+            var y = Floor(x / (PI / 4))
+            var z = Floor(y / 16d)
+            z = y - z * 16d
+            
+            var j = (long)z
+            if j & 1 != 0: j++; y++
+            
+            j &= 7
+            if j > 3: Sign = -Sign; j -= 4
+            if j > 1: Sign = -Sign
+            z = ((x - y * DP1) - y * DP2) - y * DP3
+            
+            y = CephesSinCosHelper(z, j == 1 or j == 2)
+            return if Sign < 0: -y else y
+            */

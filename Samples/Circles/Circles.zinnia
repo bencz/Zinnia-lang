@@ -1,0 +1,47 @@
+using System
+using BlitzMax
+
+namespace CirclesSample
+    int ArgbColor(byte a, r, g, b)
+		return (a to int) << 24 | (r to int) << 16 | (g to int) << 8 | b
+
+    double GetDistance(double x1, y1, x2, y2)
+        var x = x2 - x1, y = y2 - y1
+        return Math.Sqrt(x * x + y * y)
+        
+    byte Clamp(int x)
+        if x < 0: x = 0
+        if x > 255: x = 255
+        return x to byte
+		
+    void UpdateImage(Handle Image)
+        var Pixmap = LockImage(Image)
+        var Width = ImageWidth(Image)
+        var Height = ImageHeight(Image)
+        var Time = MilliSecs() / 1000.0
+        
+        for var x, y in 0 .. (Width, Height)
+            var RelX = (x to double) / Width
+            var RelY = (y to double) / Height
+            var Value = GetDistance(RelX, RelY, 0.5, 0.5) * 3 - Time
+
+            var Light = ((RelY * 100) * Math.Abs(Math.Sin(Value / 1.5)) to int)
+            var Red = ((RelX * 255) * Math.Abs(Math.Cos(Value)) to int) + Light
+            var Green = (((1 - RelY) * 255) * Math.Abs(Math.Sin(Value)) to int) + Light
+            var Blue = ((RelY * 255) * Math.Abs(Math.Cos(Value / 3)) to int) + Light
+            
+            var Color = ArgbColor(255, Clamp(Red), Clamp(Green), Clamp(Blue))
+            WritePixel Pixmap, x, y, Color
+        
+        UnlockImage Image
+     
+    void Main()
+        Graphics 1024, 720
+		
+        var Image = CreateImage(320, 240)
+        while not KeyHit(Keys.Escape) and not AppTerminate()
+            Cls
+            UpdateImage Image
+            DrawImageRect Image, 0, 0, 1024, 720
+            DrawFrameStats
+            Flip

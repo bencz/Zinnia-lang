@@ -1,0 +1,23 @@
+using System
+
+int GetInt(int x)
+	return x + 1
+	
+/*
+int Test((int -> int) Func)
+	return if Func.Self == null: (Func.Pointer to (static int -> int))(2)
+		   else (Func.Pointer to (static object, int -> int))(Func.Self, 2)
+*/
+int Test((int -> int) Func)
+	return Func(2)
+
+void Main()
+	var Time = Environment.TickCount
+	var Sum = 0
+	
+	for var i in 0 .. 100000000
+		Sum += Test(GetInt)
+		
+	Time = Environment.TickCount - Time
+	Console.WriteLine "Time: " + Time + " ms"
+	Console.WriteLine "Sum: " + Sum

@@ -1,0 +1,92 @@
+using System
+using Internals
+using Internals.Reflection
+
+namespace ReflectionSamples
+    void ListMembers()
+        Console.WriteLine "-ListMembers-------------------------------------------"
+        var IdData = Reflection.ReadDeclaredId(id_desc_ptr(Reflection))
+        var Count = Math.Min(5u, IdData.Members.Length)
+        
+        for var i in 0 .. Count
+            var IdData2 = Reflection.ReadDeclaredId(IdData.Members[i])
+            Console.WriteLine IdData2.Name
+            IdData2.Free
+            
+        IdData.Free
+        Console.WriteLine
+        
+    void TypeCompare()
+        object Obj = (0, 1, 2)
+        Console.WriteLine "-TypeCompare-------------------------------------------"
+        Console.WriteLine Obj
+        IDENTIFIER_PTR Type = id_desc_ptr((int, int, int))
+        Console.WriteLine Reflection.IsEquivalent(ObjectHelper.GetType(Obj), Type)
+        Console.WriteLine
+        
+    int GlobalVariable
+    void SettingGlobal()
+        Console.WriteLine "-SettingGlobal-----------------------------------------"
+        var Id = id_desc_ptr(GlobalVariable)
+        var IdData = Reflection.ReadDeclaredId(Id)
+        *(IdData.Address to int*) = 123123
+        IdData.Free
+        
+        Console.WriteLine GlobalVariable
+        Console.WriteLine
+        
+    void CallingFunction()
+        Console.WriteLine "-CallingFunction---------------------------------------"
+        var Id = id_desc_ptr(Function)
+        var IdData = Reflection.ReadDeclaredId(Id)
+        var FuncPtr = IdData.Address to (static string -> void)
+        IdData.Free
+        
+        FuncPtr "Function called"
+        Console.WriteLine
+        
+    void Function(string Str)
+        Console.WriteLine "Str = " + Str
+        
+    void FunctionData(IDENTIFIER_PTR Id)
+        Console.WriteLine "-FunctionData------------------------------------------"
+        var IdData = Reflection.ReadDeclaredId(Id)
+        if IdData.Type != DeclaredIdType.Function
+            Console.WriteLine "Not a function"
+            IdData.Free
+        else
+            UNDECLARED_ID_PTR FuncType = IdData.BaseUndeclaredId
+            IdData.Free
+            
+            var TypeData = Reflection.ReadUndeclaredId(FuncType)
+            Console.WriteLine "Function: " + Reflection.GetFullName(Id)
+            Console.WriteLine "Return type: " + GetUndeclIdName(TypeData.BaseUndeclaredId)
+            Console.WriteLine "Parameters:"
+            for var i in 0 .. TypeData.Parameters.Length
+                var ParamType = GetUndeclIdName(TypeData.Parameters[i].UndeclaredType)
+                var ParamName = TypeData.Parameters[i].Name
+                Console.WriteLine ParamType + " " + ParamName
+                
+            TypeData.Free
+    
+    string GetUndeclIdName(UNDECLARED_ID_PTR UndeclId)
+        var UndeclData = Reflection.ReadUndeclaredId(UndeclId)
+        var UndeclType = UndeclData.Type
+        
+        if UndeclType == UndeclaredIdType.Unknown
+            var DeclId = UndeclData.DeclaredId
+            UndeclData.Free
+            return Reflection.GetFullName(DeclId)
+        else
+            UndeclData.Free
+            
+            var DeclId = Reflection.GetDeclaredEquivalent(UndeclType)
+            if DeclId != null: return Reflection.GetFullName(DeclId)
+            return "???"
+        
+    void Main()
+        ListMembers
+        TypeCompare
+        SettingGlobal
+        CallingFunction
+        FunctionData id_desc_ptr(GetUndeclIdName)

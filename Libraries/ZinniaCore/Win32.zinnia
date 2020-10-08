@@ -1,0 +1,100 @@
+namespace System.Win32
+	//------------------------------------------------------------------------------------------
+	const var DELETE = $00010000u
+	const var READ_CONTROL = $00020000u
+	const var WRITE_DAC = $00040000u
+	const var WRITE_OWNER = $00080000u
+	const var SYNCHRONIZE = $00100000u
+	const var STANDARD_RIGHTS_REQUIRED = $000F0000u
+	const var STANDARD_RIGHTS_READ = READ_CONTROL
+	const var STANDARD_RIGHTS_WRITE = READ_CONTROL
+	const var STANDARD_RIGHTS_EXECUTE = READ_CONTROL
+
+	const var STANDARD_RIGHTS_ALL = $001F0000u
+	const var SPECIFIC_RIGHTS_ALL = $0000FFFFu
+	const var ACCESS_SYSTEM_SECURITY = $01000000u
+	const var MAXIMUM_ALLOWED = $02000000u
+
+	const var GENERIC_READ = $80000000u
+	const var GENERIC_WRITE = $40000000u
+	const var GENERIC_EXECUTE = $20000000u
+	const var GENERIC_ALL = $10000000u
+	
+	const var FILE_READ_DATA = $0001u
+	const var FILE_LIST_DIRECTORY = $0001
+	const var FILE_WRITE_DATA = $0002u
+	const var FILE_ADD_FILE = $0002u
+	const var FILE_APPEND_DATA = $0004u
+	const var FILE_ADD_SUBDIRECTORY = $0004u
+	const var FILE_CREATE_PIPE_INSTANCE = $0004u
+	const var FILE_READ_EA = $0008u
+	const var FILE_WRITE_EA = $0010u
+	const var FILE_EXECUTE = $0020u
+	const var FILE_TRAVERSE = $0020u
+	const var FILE_DELETE_CHILD = $0040u
+	const var FILE_READ_ATTRIBUTES = $0080u
+	const var FILE_WRITE_ATTRIBUTES = $0100u
+	const var FILE_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | $1FF
+
+	const var FILE_GENERIC_READ = STANDARD_RIGHTS_READ | FILE_READ_DATA |
+		FILE_READ_ATTRIBUTES | FILE_READ_EA | SYNCHRONIZE
+
+	const var FILE_GENERIC_WRITE = STANDARD_RIGHTS_WRITE | FILE_WRITE_DATA |
+		FILE_WRITE_ATTRIBUTES | FILE_WRITE_EA | FILE_APPEND_DATA | SYNCHRONIZE
+
+	const var FILE_GENERIC_EXECUTE = STANDARD_RIGHTS_EXECUTE | 
+		FILE_READ_ATTRIBUTES | FILE_EXECUTE | SYNCHRONIZE
+								 
+	//------------------------------------------------------------------------------------------
+	const var FILE_SHARE_READ = $00000001u
+	const var FILE_SHARE_WRITE = $00000002u
+	const var FILE_SHARE_DELETE = $00000004u
+	
+	//------------------------------------------------------------------------------------------
+	const var CREATE_NEW = 1u
+	const var CREATE_ALWAYS = 2u
+	const var OPEN_EXISTING = 3u
+	const var OPEN_ALWAYS = 4u
+	const var TRUNCATE_EXISTING = 5u
+	
+	//------------------------------------------------------------------------------------------
+	public extern stdcall asmname("_timeGetTime") int timeGetTime()
+	public extern stdcall asmname("_CloseHandle") int CloseHandle(Handle Object)
+	
+	public extern stdcall asmname("_CreateFileW") Handle CreateFile(
+		char* FileName,
+		uint DesiredAccess,
+		uint ShareMode,
+		void* SecurityAttributes,
+		uint CreationDisposition, 
+		uint FlagsAndAttributes,
+		Handle TemplateFile = null)
+		
+	public extern stdcall asmname("_ReadFile") bool ReadFile(
+		Handle File,
+		void* Buffer,
+		uint NumberOfBytesToRead,
+		uint* NumberOfBytesRead = null,
+		void* Overlapped = null)
+
+	public extern stdcall asmname("_WriteFile") bool WriteFile(
+		Handle File,
+		void* Buffer,
+		uint NumberOfBytesToWrite,
+		uint* NumberOfBytesWritten = null,
+		void* Overlapped = null)
+		
+	public extern stdcall asmname("_GetFileSizeEx") bool GetFileSize(Handle Object)
+		
+	//------------------------------------------------------------------------------------------
+	/*public Handle CreateFile(string FileName, uint DesiredAccess, uint ShareMode, 
+		void* SecurityAttributes, uint CreationDisposition, uint FlagsAndAttributes, 
+		Handle TemplateFile = null)
+		
+		var name = FileName.ToWString()
+		var Ret = CreateFile(name, DesiredAccess, ShareMode, SecurityAttributes, 
+			CreationDisposition, FlagsAndAttributes, TemplateFile)
+		
+		Memory.Free name
+		return Ret
+		*/

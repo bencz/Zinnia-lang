@@ -1,0 +1,42 @@
+using System
+using BlitzMax
+
+namespace SquaresSample
+    const var SquareSize = 32,
+              Width = 24,
+              Height = 20
+
+    float[Width, Height] Array
+
+    bool IsMouseOver(int x, y, w, h)
+        return x <= MouseX() < x + w and y <= MouseY() < y + h
+
+    void Update()
+        for var x, y in 0 .. (Width, Height)
+            var Value = Array[x, y]
+            var XPos = x * SquareSize
+            var YPos = y * SquareSize
+            
+            if IsMouseOver(XPos, YPos, SquareSize, SquareSize)
+                Value = 1
+                SetColor 255, 255, 255
+                DrawRect XPos, YPos, SquareSize, SquareSize
+                
+            else if Value > 0
+                var Color = 255 * Value
+                var Red = ((x to float) / Width) * Color to int
+                var Green = ((1 - (y to float) / Height)) * Color to int
+                var Blue = ((y to float) / Height) * Color to int
+                
+                SetColor Red, Green, Blue
+                DrawRect XPos, YPos, SquareSize, SquareSize
+                
+            Array[x, y] = Math.Max(Value - 0.02, 0)
+
+    void Main()
+        Graphics SquareSize * Width, SquareSize * Height
+        while not KeyHit(Keys.Escape) and not AppTerminate()
+            Cls
+            Update
+            Flip
+            

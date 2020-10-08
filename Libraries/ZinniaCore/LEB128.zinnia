@@ -1,0 +1,209 @@
+namespace System
+    public static class LEB128Helper
+        public static int DecodeInt((static void -> byte) GetByte)
+            var Result = 0
+            var Shift = 0b
+            var Byte = 0b
+            
+            cycle Byte = GetByte()
+                  Result |= (Byte & $7F to int) << Shift
+                  Shift += 7
+                  if Byte & $80 == 0: break
+                  
+            if Shift < sizeof(int) * 8 and (Byte & $40) != 0
+                Result |= -1 << Shift
+                
+            return Result
+        
+        public static long DecodeLong((static void -> byte) GetByte)
+            var Result = 0l
+            var Shift = 0b
+            var Byte = 0b
+            
+            cycle Byte = GetByte()
+                  Result |= (Byte & $7F to long) << Shift
+                  Shift += 7
+                  if Byte & $80 == 0: break
+                  
+            if Shift < sizeof(long) * 8 and (Byte & $40) != 0
+                Result |= -1 << Shift
+                
+            return Result
+                
+        public static uint DecodeUInt((static void -> byte) GetByte)
+            var Result = 0u
+            var Shift = 0b
+            var Byte = 0b
+            
+            cycle Byte = GetByte()
+                  Result |= (Byte & $7F to uint) << Shift
+                  Shift += 7
+                  if Byte & $80 == 0: break
+                
+            return Result
+                  
+        public static ulong DecodeULong((static void -> byte) GetByte)
+            var Result = 0ul
+            var Shift = 0b
+            var Byte = 0b
+            
+            cycle Byte = GetByte()
+                  Result |= (Byte & $7F to ulong) << Shift
+                  Shift += 7
+                  if Byte & $80 == 0: break
+                
+            return Result
+                
+        public static void Skip(ref byte* Bytes)
+			do
+				Bytes++
+			while Bytes[-1] & $80 != 0
+			
+        public static int DecodeInt(ref byte* Bytes)	
+            var Result = 0
+            var Shift = 0b
+            var Byte = 0b
+            
+            cycle Byte = *Bytes
+                  Bytes++
+                  Result |= (Byte & $7F to int) << Shift
+                  Shift += 7
+                  if Byte & $80 == 0: break
+                  
+            if Shift < sizeof(int) * 8 and (Byte & $40) != 0
+                Result |= -1 << Shift
+                
+            return Result
+        
+        public static long DecodeLong(ref byte* Bytes)
+            var Result = 0l
+            var Shift = 0b
+            var Byte = 0b
+            
+            cycle Byte = *Bytes
+                  Bytes++
+                  Result |= (Byte & $7F to long) << Shift
+                  Shift += 7
+                  if Byte & $80 == 0: break
+                  
+            if Shift < sizeof(long) * 8 and (Byte & $40) != 0
+                Result |= -1 << Shift
+                
+            return Result
+                
+        public static uint DecodeUInt(ref byte* Bytes)
+            var Result = 0u
+            var Shift = 0b
+            var Byte = 0b
+            
+            cycle Byte = *Bytes
+                  Bytes++
+                  Result |= (Byte & $7F to uint) << Shift
+                  Shift += 7
+                  if Byte & $80 == 0: break
+                
+            return Result
+                  
+        public static ulong DecodeULong(ref byte* Bytes)
+            var Result = 0ul
+            var Shift = 0b
+            var Byte = 0b
+            
+            cycle Byte = *Bytes
+                  Bytes++
+                  Result |= (Byte & $7F to ulong) << Shift
+                  Shift += 7
+                  if Byte & $80 == 0: break
+                
+            return Result
+        
+        public static uint_ptr Decode_uint_ptr(ref byte* Bytes)
+#ifdef LONG_MODE
+            return DecodeULong(ref Bytes)
+#else
+            return DecodeUInt(ref Bytes)
+#endif
+                
+                
+        public static void Encode(int Value, (static byte -> void) EmitByte)
+            var More = true
+            while More
+                var Byte = Value & $7F to byte
+                var Signed = (Byte & $40) != 0
+                Value >>= 7
+
+                if (Value == 0 and not Signed) or (Value == -1 and Signed): More = false
+                else Byte |= $80
+                EmitByte Byte
+
+        public static void Encode(uint Value, (static byte -> void) EmitByte)
+            do
+                var Byte = Value & $7F to byte
+                if (Value >>= 7) != 0: Byte |= $80
+                EmitByte Byte
+            while Value != 0
+
+        public static void Encode(long Value, (static byte -> void) EmitByte)
+            var More = true
+            while More
+                var Byte = Value & $7F to byte
+                var Signed = (Byte & $40) != 0
+                Value >>= 7
+
+                if (Value == 0 and not Signed) or (Value == -1 and Signed): More = false
+                else Byte |= $80
+                EmitByte Byte
+
+        public static void Encode(ulong Value, (static byte -> void) EmitByte)
+            do
+                var Byte = Value & $7F to byte
+                if (Value >>= 7) != 0: Byte |= $80
+                EmitByte Byte
+            while Value != 0
+
+            
+        
+        public static void Encode(int Value, ref byte* Bytes)
+            var More = true
+            while More
+                var Byte = Value & $7F to byte
+                var Signed = (Byte & $40) != 0
+                Value >>= 7
+
+                if (Value == 0 and not Signed) or (Value == -1 and Signed): More = false
+                else Byte |= $80
+                
+                *Bytes = Byte
+                Bytes++
+
+        public static void Encode(uint Value, ref byte* Bytes)
+            do
+                var Byte = Value & $7F to byte
+                if (Value >>= 7) != 0: Byte |= $80
+                
+                *Bytes = Byte
+                Bytes++
+            while Value != 0
+            
+        public static void Encode(long Value, ref byte* Bytes)
+            var More = true
+            while More
+                var Byte = Value & $7F to byte
+                var Signed = (Byte & $40) != 0
+                Value >>= 7
+
+                if (Value == 0 and not Signed) or (Value == -1 and Signed): More = false
+                else Byte |= $80
+                
+                *Bytes = Byte
+                Bytes++
+            
+        public static void Encode(ulong Value, ref byte* Bytes)
+            do
+                var Byte = Value & $7F to byte
+                if (Value >>= 7) != 0: Byte |= $80
+                
+                *Bytes = Byte
+                Bytes++
+            while Value != 0
+            

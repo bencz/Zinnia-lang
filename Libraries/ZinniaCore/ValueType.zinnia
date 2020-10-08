@@ -1,0 +1,46 @@
+using System
+using Internals
+using Internals.Reflection
+
+namespace System
+	public class ValueType
+		internal IDENTIFIER_PTR BoxedType
+		internal void** BoxedFuncTable
+		internal uint_ptr Size
+		internal byte[?] Data
+		
+		public ValueType(void* Src, IDENTIFIER_PTR BoxedType, uint_ptr Size)
+			: _set_extra_storage Size
+			
+			this.Size = Size
+			this.BoxedType = BoxedType
+			Memory.Copy Data, Src, Size
+		
+			var IdData = Reflection.ReadDeclaredId(BoxedType)
+			if IdData.Type == DeclaredIdType.Class or IdData.Type == DeclaredIdType.Struct
+				BoxedFuncTable = IdData.FunctionTable to void**
+			
+			IdData.Free
+		
+		public void Unbox(void* Dst, IDENTIFIER_PTR Type)
+			if not Reflection.IsEquivalent(BoxedType, Type)
+				throw new InvalidCastException()
+				
+			Memory.Copy Dst, Data, Size
+			
+		public override string ToString()
+			if BoxedFuncTable != null
+				var f = BoxedFuncTable[0] to (static void* -> string)
+				if f != ValueType.ToString: return f(Data)
+				
+			return Reflection.GetFullName(BoxedType)
+
+	public class Enum : ValueType
+		public Enum(void* Src, IDENTIFIER_PTR BoxedType, uint_ptr Size)
+			: base Src, BoxedType, Size
+			  _set_extra_storage Size
+			
+	public class Tuple : ValueType
+		public Tuple(void* Src, IDENTIFIER_PTR BoxedType, uint_ptr Size)
+			: base Src, BoxedType, Size
+			  _set_extra_storage Size

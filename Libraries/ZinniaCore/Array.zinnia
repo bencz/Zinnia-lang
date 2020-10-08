@@ -1,0 +1,166 @@
+using Internals
+using Internals.Reflection
+
+namespace System
+	// Dimension must be greater than 0
+	
+	public sealed class Array
+		internal IDENTIFIER_PTR ArrayType
+		internal uint_ptr DimensionCount
+		internal uint_ptr ItemSize
+		internal uint_ptr DataSize
+		internal uint_ptr[?] Dimensions
+	
+		static uint_ptr CalculateDataSize(uint_ptr[*] Dimensions, uint_ptr ItemSize)
+			uint_ptr Ret = 1
+			for var i in 0 .. Dimensions.Length
+				Ret *= Dimensions[i]
+				
+			return Ret * ItemSize
+	
+		/*public Array(IDENTIFIER_PTR ArrayType, int_ptr[*] Dimensions, int_ptr ItemSize, void* InitialData = null)
+			var DataSize = CalculateDataSize(Dimensions, ItemSize)
+			_set_extra_storage Dimensions.Length * sizeof(int_ptr) + DataSize
+			
+			this.ArrayType = ArrayType
+			this.DimensionCount = Dimensions.Length
+			this.ItemSize = ItemSize
+			this.DataSize = DataSize
+			
+			for var i in 0 .. Dimensions.Length
+				this.Dimensions[i] = Dimensions[i]
+	
+			if InitialData != null
+				Memory.Copy DataPointer, InitialData, DataSize*/
+				
+		public Array(IDENTIFIER_PTR ArrayType, uint_ptr[*] Dimensions, uint_ptr ItemSize, void* InitialData = null)
+			: _set_extra_storage Dimensions.Length * sizeof(uint_ptr) + CalculateDataSize(Dimensions, ItemSize)
+			
+			this.ArrayType = ArrayType
+			this.DimensionCount = Dimensions.Length
+			this.ItemSize = ItemSize
+			this.DataSize = CalculateDataSize(Dimensions, ItemSize)
+			
+			for var i in 0 .. Dimensions.Length
+				this.Dimensions[i] = Dimensions[i]
+			
+			if InitialData != null
+				Memory.Copy DataPointer, InitialData, DataSize
+			
+		public void* DataPointer:
+			get return &Dimensions[DimensionCount]
+	
+		public int Length:
+			get 
+				var Ret = 1
+				for var i in 0 .. DimensionCount
+					Ret *= Dimensions[i] to int
+					
+				return Ret
+				
+		public uint_ptr PtrLength:
+			get 
+				uint_ptr Ret = 1
+				for var i in 0 .. DimensionCount
+					Ret *= Dimensions[i]
+					
+				return Ret
+				
+		public int Rank: get return DimensionCount to int
+		public uint_ptr PtrRank: get return DimensionCount
+			
+		internal UNDECLARED_ID_PTR BaseType:
+			get 
+				var AliasData = Reflection.ReadDeclaredId(ArrayType)
+				var ArrayType = Reflection.ReadUndeclaredId(AliasData.BaseUndeclaredId)
+				var Ret = ArrayType.BaseUndeclaredId
+				AliasData.Free
+				ArrayType.Free
+				return Ret
+			
+		public int GetLength(int dimension)
+			if dimension < 0 or (dimension to uint_ptr) >= DimensionCount
+				throw new IndexOutOfRangeException()
+				
+			return checked Dimensions[dimension] to int
+			
+		public uint_ptr GetPtrLength(uint_ptr dimension)
+			if dimension >= DimensionCount
+				throw new IndexOutOfRangeException()
+				
+			return checked Dimensions[dimension]
+			
+		public void Initialize()
+			Memory.Zero DataPointer, DataSize
+			
+		public override string ToString()
+			return Reflection.GetFullName(ArrayType)
+			
+		public void CopyTo(Array array, int index)
+			if index < 0: throw new ArgumentOutOfRangeException("index")
+			_Copy this, 0, array, index to uint_ptr, PtrLength
+		
+		public void CopyTo(Array array, long index)
+			if index < 0 or index > uint_ptr.MaxValue
+				throw new ArgumentOutOfRangeException("index")
+				
+			_Copy this, 0, array, index to uint_ptr, PtrLength
+		
+		public static void Copy(Array sourceArray, Array destinationArray, int length)
+			if length < 0: throw new ArgumentOutOfRangeException("length")
+			_Copy sourceArray, 0 to uint_ptr, destinationArray, 0 to uint_ptr, length to uint_ptr
+		
+		public static void Copy(Array sourceArray, Array destinationArray, long length)
+			if length < 0 or length > uint_ptr.MaxValue
+				throw new ArgumentOutOfRangeException("length")
+				
+			_Copy sourceArray, 0 to uint_ptr, destinationArray, 0 to uint_ptr, length to uint_ptr
+		
+		public static void Copy(Array sourceArray, int sourceIndex, Array destinationArray, int destinationIndex, length)
+			if sourceIndex < 0: throw new ArgumentOutOfRangeException("sourceIndex")
+			if destinationIndex < 0: throw new ArgumentOutOfRangeException("destinationIndex")
+			if length < 0: throw new ArgumentOutOfRangeException("length")
+				
+			_Copy sourceArray, sourceIndex to uint_ptr, destinationArray, destinationIndex to uint_ptr, length to uint_ptr
+			
+		public static void Copy(Array sourceArray, long sourceIndex, Array destinationArray, long destinationIndex, length)
+			if sourceIndex < 0 or sourceIndex > uint_ptr.MaxValue
+				throw new ArgumentOutOfRangeException("sourceIndex")
+				
+			if destinationIndex < 0 or destinationIndex > uint_ptr.MaxValue
+				throw new ArgumentOutOfRangeException("destinationIndex")
+				
+			if length < 0 or length > uint_ptr.MaxValue
+				throw new ArgumentOutOfRangeException("length")
+				
+			_Copy sourceArray, sourceIndex to uint_ptr, destinationArray, destinationIndex to uint_ptr, length to uint_ptr
+
+		public static void _Copy(Array sourceArray, uint_ptr sourceIndex, Array destinationArray, uint_ptr destinationIndex, length)
+			if sourceArray === null: throw new ArgumentNullException("sourceArray")
+			if destinationArray === null: throw new ArgumentNullException("destinationArray")
+			
+			if sourceArray.DimensionCount != destinationArray.DimensionCount
+				throw new RankException()
+				
+			if sourceArray.DimensionCount != 1
+				throw new ArgumentException("Copy operation can be used with only 1 dimension", "sourceArray")
+				
+			var SrcBaseType = sourceArray.BaseType
+			var DstBaseType = destinationArray.BaseType
+			if not Reflection.IsEquivalent(SrcBaseType, DstBaseType)
+				throw new ArrayTypeMismatchException()
+				
+			if length > sourceArray.Dimensions[0] or length > destinationArray.Dimensions[0]
+				throw new ArgumentOutOfRangeException("length")
+				
+			if sourceIndex + length > sourceArray.Dimensions[0]
+				throw new ArgumentOutOfRangeException("sourceIndex")
+				
+			if destinationIndex + length > destinationArray.Dimensions[0]
+				throw new ArgumentOutOfRangeException("destinationIndex")
+				
+			for var i in 0 .. length
+				var Size = sourceArray.ItemSize
+				var SrcPtr = (sourceArray.DataPointer to byte*) + Size * (i + sourceIndex)
+				var DstPtr = (destinationArray.DataPointer to byte*) + Size * (i + destinationIndex)
+				Memory.Copy DstPtr, SrcPtr, Size
