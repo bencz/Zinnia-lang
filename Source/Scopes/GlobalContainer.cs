@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.IO;
 using System.Collections;
+using Zinnia.Base;
 
 namespace Zinnia
 {

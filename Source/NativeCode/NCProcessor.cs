@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using System.Linq;
+using Zinnia.Base;
 
 namespace Zinnia.NativeCode
 {

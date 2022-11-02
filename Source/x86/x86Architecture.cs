@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Numerics;
+using Zinnia.Base;
 using Zinnia.NativeCode;
 
 namespace Zinnia.x86
@@ -1450,7 +1451,7 @@ namespace Zinnia.x86
 			return null;
 		}
 
-		public CondBranch[] GetBranches(GlobalContainer Global, Command Then,
+		public CondBranch[] GetBranches(GlobalContainer globalContainer, Command Then,
 			Command Else, ref ExpressionNode Condition)
 		{
 			var ThenJump = GetJumpBranch(Then);
@@ -1477,7 +1478,7 @@ namespace Zinnia.x86
 					}
 					else
 					{
-						var False = Constants.GetBoolValue(Global, false, new CodeString());
+						var False = Constants.GetBoolValue(globalContainer, false, new CodeString());
 						var Ch = new ExpressionNode[] {OpCond, False };
 						OpCond = new OpExpressionNode(Operator.Equality, Ch, OpCond.Code);
 					}
@@ -1486,12 +1487,12 @@ namespace Zinnia.x86
 				}
 				else
 				{
-					ProcessMoveCondBranch(Global, MoveThen);
+					ProcessMoveCondBranch(globalContainer, MoveThen);
 				}
 			}
 			else if (MoveThen != null && Else == null)
 			{
-				ProcessMoveCondBranch(Global, MoveThen);
+				ProcessMoveCondBranch(globalContainer, MoveThen);
 			}
 
 			return new CondBranch[] { ExprThen, ExprElse };

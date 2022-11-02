@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.IO;
 
-namespace Zinnia
+namespace Zinnia.Base
 {
     public abstract class CondBranch
     {
@@ -14,9 +13,9 @@ namespace Zinnia
     {
         public int Label;
 
-        public JumpCodeBranch(int Label)
+        public JumpCodeBranch(int label)
         {
-            this.Label = Label;
+            Label = label;
         }
     }
 
@@ -24,9 +23,9 @@ namespace Zinnia
     {
         public Action<CodeGenerator> GetCode;
 
-        public CodeCondBranch(Action<CodeGenerator> GetCode)
+        public CodeCondBranch(Action<CodeGenerator> getCode)
         {
-            this.GetCode = GetCode;
+            GetCode = getCode;
         }
     }
 
@@ -40,16 +39,14 @@ namespace Zinnia
         public int Label;
         public string Name;
 
-        public LabelInstruction(int Label, string Name = null)
+        public LabelInstruction(int label, string name = null)
         {
-            this.Label = Label;
-            this.Name = Name;
+            Label = label;
+            Name = name;
         }
 
-        public string LabelName
-        {
-            get { return Name == null ? "_" + Label : Name; }
-        }
+        public string LabelName 
+            => Name ?? "_" + Label;
     }
 
     public class JumpInstruction : Instruction
@@ -57,22 +54,20 @@ namespace Zinnia
         public int Label;
         public string Name;
 
-        public JumpInstruction(int Label, string Name = null)
+        public JumpInstruction(int label, string name = null)
         {
-            this.Label = Label;
-            this.Name = Name;
+            Label = label;
+            Name = name;
         }
 
-        public string LabelName
-        {
-            get { return Name == null ? "_" + Label : Name; }
-        }
+        public string LabelName 
+            => Name ?? "_" + Label;
     }
 
     public sealed class ReplaceableJumpInstruction : JumpInstruction
     {
-        public ReplaceableJumpInstruction(int Label)
-            : base(Label)
+        public ReplaceableJumpInstruction(int label)
+            : base(label)
         {
         }
     }
@@ -81,74 +76,74 @@ namespace Zinnia
     {
         public string Instruction;
 
-        public StrInstruction(string Instruction)
+        public StrInstruction(string instruction)
         {
-            this.Instruction = Instruction;
+            this.Instruction = instruction;
         }
     }
 
     public class InstructionContainer
     {
-        public List<Instruction> Instructions = new List<Instruction>();
+        public List<Instruction> Instructions = new();
         public Dictionary<int, int> LabelPositions;
 
         public InstructionContainer()
         {
         }
 
-        public void Add(Instruction Instruction)
+        public void Add(Instruction instruction)
         {
-            if (Instruction is LabelInstruction)
+            if (instruction is LabelInstruction lblIns)
             {
-                var LblIns = Instruction as LabelInstruction;
-                if (LabelPositions == null) LabelPositions = new Dictionary<int, int>();
-                LabelPositions.Add(LblIns.Label, Instructions.Count);
+                LabelPositions ??= new Dictionary<int, int>();
+                LabelPositions.Add(lblIns.Label, Instructions.Count);
             }
 
-            Instructions.Add(Instruction);
+            Instructions.Add(instruction);
         }
 
-        public void Add(InstructionContainer InsContainer)
+        public void Add(InstructionContainer insContainer)
         {
-            var Count = Instructions.Count;
-            Instructions.AddRange(InsContainer.Instructions);
+            var count = Instructions.Count;
+            Instructions.AddRange(insContainer.Instructions);
 
-            if (InsContainer.LabelPositions != null)
-            {
-                foreach (var e in InsContainer.LabelPositions)
-                    LabelPositions.Add(e.Key, e.Value + Count);
-            }
+            if (insContainer.LabelPositions == null) 
+                return;
+            
+            foreach (var e in insContainer.LabelPositions)
+                LabelPositions.Add(e.Key, e.Value + count);
         }
 
-        public void Add(string Str)
+        public void Add(string str)
         {
-            if (Str.Trim() == "mov dword[ebp - 12], _GetInt") {; }
-            Instructions.Add(new StrInstruction(Str));
+            if (str.Trim() == "mov dword[ebp - 12], _GetInt") { }
+            Instructions.Add(new StrInstruction(str));
         }
 
-        public void Jump(int Label)
+        public void Jump(int label)
         {
-            if (Label < 0) throw new ArgumentException(null, "Label");
-            Instructions.Add(new ReplaceableJumpInstruction(Label));
+            if (label < 0) 
+                throw new ArgumentException(null, "label");
+            Instructions.Add(new ReplaceableJumpInstruction(label));
         }
 
-        public void Jump(string Label)
+        public void Jump(string label)
         {
-            Instructions.Add(new JumpInstruction(-1, Label));
+            Instructions.Add(new JumpInstruction(-1, label));
         }
 
-        public void Label(string Label)
+        public void Label(string label)
         {
-            Instructions.Add(new LabelInstruction(-1, Label));
+            Instructions.Add(new LabelInstruction(-1, label));
         }
 
-        public void Label(int Label)
+        public void Label(int label)
         {
-            if (LabelPositions == null) LabelPositions = new Dictionary<int, int>();
-            LabelPositions.Add(Label, Instructions.Count);
+            LabelPositions ??= new Dictionary<int, int>();
+            LabelPositions.Add(label, Instructions.Count);
 
-            var Ins = new LabelInstruction(Label);
-            Instructions.Add(Ins);
+            var ins = new LabelInstruction(label);
+            Instructions.Add(ins);
         }
 
         public void Reset()
@@ -157,64 +152,59 @@ namespace Zinnia
             LabelPositions = new Dictionary<int, int>();
         }
 
-        public void Insert(int Index, InstructionContainer InsContainer)
+        public void Insert(int index, InstructionContainer insContainer)
         {
-            var P = InsContainer.Instructions.Count - 1;
+            var p = insContainer.Instructions.Count - 1;
             if (LabelPositions != null)
             {
                 foreach (var e in LabelPositions.Keys.ToArray())
-                    if (LabelPositions[e] >= Index) LabelPositions[e] += P;
+                    if (LabelPositions[e] >= index) LabelPositions[e] += p;
             }
 
-            Instructions.InsertRange(Index, InsContainer.Instructions);
-            if (InsContainer.LabelPositions != null)
+            Instructions.InsertRange(index, insContainer.Instructions);
+            if (insContainer.LabelPositions != null)
             {
-                foreach (var e in InsContainer.LabelPositions)
-                    LabelPositions.Add(e.Key, e.Value + Index);
+                foreach (var e in insContainer.LabelPositions)
+                    LabelPositions.Add(e.Key, e.Value + index);
             }
         }
 
-        public int JumpsTo(int Label)
+        public int JumpsTo(int label)
         {
-            var InsIndex = LabelPositions[Label];
-            for (var i = InsIndex; i < Instructions.Count; i++)
+            var insIndex = LabelPositions[label];
+            for (var i = insIndex; i < Instructions.Count; i++)
             {
-                var Ins = Instructions[i];
-                if (Ins is JumpInstruction)
+                var ins = Instructions[i];
+                switch (ins)
                 {
-                    var JumpIns = Ins as JumpInstruction;
-                    return JumpsTo(JumpIns.Label);
-                }
-                else if (Ins is LabelInstruction)
-                {
-                    var LabelIns = Ins as LabelInstruction;
-                    Label = LabelIns.Label;
-                    continue;
+                    case JumpInstruction jumpIns:
+                        return JumpsTo(jumpIns.Label);
+                    case LabelInstruction labelIns:
+                        label = labelIns.Label;
+                        continue;
                 }
 
                 break;
             }
 
-            return Label;
+            return label;
         }
 
-        public string EncodeToText(InstructionEncoder Encoder)
+        public string EncodeToText(InstructionEncoder encoder)
         {
-            var StrBuilder = new StringBuilder();
-            for (var i = 0; i < Instructions.Count; i++)
+            var strBuilder = new StringBuilder();
+            foreach (var ins in Instructions.Where(ins => !ins.Skip))
             {
-                var Ins = Instructions[i];
-                if (!Ins.Skip)
-                    StrBuilder.Append(Encoder.EncodeToText(Ins));
+                strBuilder.Append(encoder.EncodeToText(ins));
             }
 
-            return StrBuilder.ToString();
+            return strBuilder.ToString();
         }
     }
 
     public abstract class InstructionEncoder
     {
-        public abstract string EncodeToText(Instruction Instruction);
+        public abstract string EncodeToText(Instruction instruction);
     }
 
     public abstract class CodeGenerator
@@ -225,22 +215,22 @@ namespace Zinnia
         public InstructionContainer InsContainer;
         public Dictionary<int, InstructionContainer> ReplaceJumps;
 
-        public abstract void EmitExpression(ExpressionNode Node);
-        public abstract void EmitCondition(ExpressionNode Node, CondBranch Then, CondBranch Else, int NextLabel = -1);
-        public abstract void EmitCondition(ExpressionNode Node, int Then, int Else, bool ElseAfterCondition);
+        public abstract void EmitExpression(ExpressionNode node);
+        public abstract void EmitCondition(ExpressionNode node, CondBranch then, CondBranch @else, int nextLabel = -1);
+        public abstract void EmitCondition(ExpressionNode node, int then, int @else, bool elseAfterCondition);
 
-        public abstract void Align(int Align);
-        public abstract void DeclareFile(string FileName);
-        public abstract void DeclareLabelPtr(string Label);
-        public abstract void DeclareLabelPtr(int Label);
-        public abstract void DeclareUnknownBytes(int Count);
-        public abstract void DeclareZeroBytes(int Count);
-        public abstract void Declare(Identifier Type, ConstValue Data);
-        public abstract void Store(string String, bool WideString = true, bool ZeroTerminated = true);
+        public abstract void Align(int align);
+        public abstract void DeclareFile(string fileName);
+        public abstract void DeclareLabelPtr(string label);
+        public abstract void DeclareLabelPtr(int label);
+        public abstract void DeclareUnknownBytes(int count);
+        public abstract void DeclareZeroBytes(int count);
+        public abstract void Declare(Identifier type, ConstValue data);
+        public abstract void Store(string str, bool wideString = true, bool zeroTerminated = true);
 
-        public CodeGenerator(CompilerState State)
+        public CodeGenerator(CompilerState state)
         {
-            this.State = State;
+            this.State = state;
             this.InsContainer = new InstructionContainer();
         }
 
@@ -249,124 +239,124 @@ namespace Zinnia
             DeclareZeroBytes(State.Arch.RegSize);
         }
 
-        public void Declare(ConstExpressionNode Value)
+        public void Declare(ConstExpressionNode value)
         {
-            Declare(Value.Type.RealId as Type, Value.Value);
+            Declare(value.Type.RealId as Type, value.Value);
         }
 
-        public void Declare(bool Value)
+        public void Declare(bool value)
         {
-            Declare(Container.GlobalContainer.CommonIds.Boolean, new BooleanValue(Value));
+            Declare(Container.GlobalContainer.CommonIds.Boolean, new BooleanValue(value));
         }
 
-        public void Declare(string Value)
+        public void Declare(string value)
         {
-            Declare(Container.GlobalContainer.CommonIds.String, new StringValue(Value));
+            Declare(Container.GlobalContainer.CommonIds.String, new StringValue(value));
         }
 
-        public void Declare(float Value)
+        public void Declare(float value)
         {
-            Declare(Container.GlobalContainer.CommonIds.Single, new DoubleValue(Value));
+            Declare(Container.GlobalContainer.CommonIds.Single, new DoubleValue(value));
         }
 
-        public void Declare(double Value)
+        public void Declare(double value)
         {
-            Declare(Container.GlobalContainer.CommonIds.Double, new DoubleValue(Value));
+            Declare(Container.GlobalContainer.CommonIds.Double, new DoubleValue(value));
         }
 
-        public void Declare(long Value)
+        public void Declare(long value)
         {
-            Declare(Container.GlobalContainer.CommonIds.Int64, new IntegerValue(Value));
+            Declare(Container.GlobalContainer.CommonIds.Int64, new IntegerValue(value));
         }
 
-        public void Declare(ulong Value)
+        public void Declare(ulong value)
         {
-            Declare(Container.GlobalContainer.CommonIds.UInt64, new IntegerValue(Value));
+            Declare(Container.GlobalContainer.CommonIds.UInt64, new IntegerValue(value));
         }
 
-        public void Declare(int Value)
+        public void Declare(int value)
         {
-            Declare(Container.GlobalContainer.CommonIds.Int32, new IntegerValue(Value));
+            Declare(Container.GlobalContainer.CommonIds.Int32, new IntegerValue(value));
         }
 
-        public void Declare(uint Value)
+        public void Declare(uint value)
         {
-            Declare(Container.GlobalContainer.CommonIds.UInt32, new IntegerValue(Value));
+            Declare(Container.GlobalContainer.CommonIds.UInt32, new IntegerValue(value));
         }
 
-        public void Declare(short Value)
+        public void Declare(short value)
         {
-            Declare(Container.GlobalContainer.CommonIds.Int32, new IntegerValue(Value));
+            Declare(Container.GlobalContainer.CommonIds.Int32, new IntegerValue(value));
         }
 
-        public void Declare(ushort Value)
+        public void Declare(ushort value)
         {
-            Declare(Container.GlobalContainer.CommonIds.UInt16, new IntegerValue(Value));
+            Declare(Container.GlobalContainer.CommonIds.UInt16, new IntegerValue(value));
         }
 
-        public void Declare(sbyte Value)
+        public void Declare(sbyte value)
         {
-            Declare(Container.GlobalContainer.CommonIds.SByte, new IntegerValue(Value));
+            Declare(Container.GlobalContainer.CommonIds.SByte, new IntegerValue(value));
         }
 
-        public void Declare(byte Value)
+        public void Declare(byte value)
         {
-            Declare(Container.GlobalContainer.CommonIds.Byte, new IntegerValue(Value));
+            Declare(Container.GlobalContainer.CommonIds.Byte, new IntegerValue(value));
         }
 
-        public InstructionContainer ExecuteOnTempInsContainer(Action Action)
+        public InstructionContainer ExecuteOnTempInsContainer(Action action)
         {
-            var InsContainer = new InstructionContainer();
-            var OldInsContainer = this.InsContainer;
-            this.InsContainer = InsContainer;
+            var insContainer = new InstructionContainer();
+            var oldInsContainer = this.InsContainer;
+            this.InsContainer = insContainer;
 
-            Action();
-            this.InsContainer = OldInsContainer;
-            return InsContainer;
+            action();
+            this.InsContainer = oldInsContainer;
+            return insContainer;
         }
 
-        public InstructionContainer SetJumpReplacing(int Label, Action Action)
+        public InstructionContainer SetJumpReplacing(int label, Action action)
         {
-            var InsContainer = ExecuteOnTempInsContainer(Action);
-            SetJumpReplacing(Label, InsContainer);
-            return InsContainer;
+            var insContainer = ExecuteOnTempInsContainer(action);
+            SetJumpReplacing(label, insContainer);
+            return insContainer;
         }
 
-        public void SetJumpReplacing(int Label, InstructionContainer InsContainer)
+        public void SetJumpReplacing(int label, InstructionContainer insContainer)
         {
-            if (ReplaceJumps == null) ReplaceJumps = new Dictionary<int, InstructionContainer>();
-            ReplaceJumps.Add(Label, InsContainer);
+            ReplaceJumps ??= new Dictionary<int, InstructionContainer>();
+            ReplaceJumps.Add(label, insContainer);
         }
 
         public virtual void SkipUnnecessaryJumps()
         {
-            for (var i = 0; i < InsContainer.Instructions.Count; i++)
-                InsContainer.Instructions[i].Skip = false;
+            foreach (var t in InsContainer.Instructions)
+                t.Skip = false;
 
             for (var i = 0; i < InsContainer.Instructions.Count; i++)
             {
-                var JumpIns = InsContainer.Instructions[i] as JumpInstruction;
-                if (JumpIns != null && !JumpIns.Skip)
+                var jumpIns = InsContainer.Instructions[i] as JumpInstruction;
+                if (jumpIns is { Skip: false })
                 {
-                    var SkipInstructions = JumpIns is ReplaceableJumpInstruction;
-                    JumpIns.Label = InsContainer.JumpsTo(JumpIns.Label);
+                    var skipInstructions = jumpIns is ReplaceableJumpInstruction;
+                    jumpIns.Label = InsContainer.JumpsTo(jumpIns.Label);
 
-                    for (var SkipPos = i + 1; SkipPos < InsContainer.Instructions.Count; SkipPos++)
+                    for (var skipPos = i + 1; skipPos < InsContainer.Instructions.Count; skipPos++)
                     {
-                        var SIns = InsContainer.Instructions[SkipPos];
-                        if (SIns is LabelInstruction)
+                        var sIns = InsContainer.Instructions[skipPos];
+                        if (sIns is LabelInstruction sLabelIns)
                         {
-                            var SLabelIns = SIns as LabelInstruction;
-                            if (SLabelIns.Label == JumpIns.Label)
+                            if (sLabelIns.Label == jumpIns.Label)
                             {
-                                JumpIns.Skip = true;
+                                jumpIns.Skip = true;
                                 break;
                             }
                         }
-                        else if (SIns is JumpInstruction)
+                        else if (sIns is JumpInstruction)
                         {
-                            if (SkipInstructions) SIns.Skip = true;
-                            if (SIns is ReplaceableJumpInstruction && !SkipInstructions)
+                            if (skipInstructions)
+                                sIns.Skip = true;
+                            if (sIns is ReplaceableJumpInstruction && !skipInstructions)
                                 break;
                         }
                         else
@@ -380,21 +370,19 @@ namespace Zinnia
 
         public virtual void SkipUnnecessaryLabels()
         {
-            var FS = Container.FunctionScope;
-            for (var i = 0; i < InsContainer.Instructions.Count; i++)
+            var fs = Container.FunctionScope;
+            foreach (var t in InsContainer.Instructions)
             {
-                var Ins = InsContainer.Instructions[i] as LabelInstruction;
-                if (Ins != null && !FS.NeverSkippedLabels.Contains(Ins.Label))
-                    Ins.Skip = true;
+                if (t is LabelInstruction ins && !fs.NeverSkippedLabels.Contains(ins.Label))
+                    ins.Skip = true;
             }
 
-            for (var i = 0; i < InsContainer.Instructions.Count; i++)
+            foreach (var t in InsContainer.Instructions)
             {
-                var JumpIns = InsContainer.Instructions[i] as JumpInstruction;
-                if (JumpIns != null && !JumpIns.Skip)
+                if (t is JumpInstruction { Skip: false } jumpIns)
                 {
-                    var JumpsTo = InsContainer.LabelPositions[JumpIns.Label];
-                    InsContainer.Instructions[JumpsTo].Skip = false;
+                    var jumpsTo = InsContainer.LabelPositions[jumpIns.Label];
+                    InsContainer.Instructions[jumpsTo].Skip = false;
                 }
             }
         }
@@ -405,28 +393,24 @@ namespace Zinnia
 
             if (ReplaceJumps != null)
             {
-                var Instructions = InsContainer.Instructions;
-                var Count = 0;
+                var instructions = InsContainer.Instructions;
+                var count = 0;
                 Reset();
 
-                for (var i = 0; i < Instructions.Count; i++)
+                foreach (var ins in instructions.Where(ins => !ins.Skip))
                 {
-                    var Ins = Instructions[i];
-                    if (!Ins.Skip)
+                    if (ins is ReplaceableJumpInstruction jIns && ReplaceJumps.ContainsKey(jIns.Label))
                     {
-                        var JIns = Ins as ReplaceableJumpInstruction;
-                        if (JIns != null && ReplaceJumps.ContainsKey(JIns.Label))
-                        {
-                            InsContainer.Add(ReplaceJumps[JIns.Label]);
-                            Count++;
-                            continue;
-                        }
-
-                        InsContainer.Add(Ins);
+                        InsContainer.Add(ReplaceJumps[jIns.Label]);
+                        count++;
+                        continue;
                     }
+
+                    InsContainer.Add(ins);
                 }
 
-                if (Count > 0) ProcessJumps();
+                if (count > 0) 
+                    ProcessJumps();
             }
         }
 
@@ -447,15 +431,14 @@ namespace Zinnia
         int RegSize { get; }
         int MaxStructPow2Size { get; }
 
-        bool ProcessIdentifier(Identifier Id);
-        bool ProcessFunction(Function Func);
-        bool CreateAssembly(Function Func);
-        void GetAssembly(CodeGenerator CG, Function Function);
-        bool Compile(CompilerState State, CodeFile[] CodeFiles);
+        bool ProcessIdentifier(Identifier id);
+        bool ProcessFunction(Function func);
+        bool CreateAssembly(Function func);
+        void GetAssembly(CodeGenerator cg, Function function);
+        bool Compile(CompilerState state, CodeFile[] codeFiles);
 
 
-        bool IsSimpleCompareNode(ExpressionNode Node);
-        CondBranch[] GetBranches(GlobalContainer Global, Command Then,
-            Command Else, ref ExpressionNode Condition);
+        bool IsSimpleCompareNode(ExpressionNode node);
+        CondBranch[] GetBranches(GlobalContainer globalContainer, Command then, Command @else, ref ExpressionNode condition);
     }
 }

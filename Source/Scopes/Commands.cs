@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Linq;
+using Zinnia.Base;
 
 namespace Zinnia
 {
@@ -511,7 +512,7 @@ namespace Zinnia
 					if (Branches[1] == null && i + 1 < Children.Count)
 						Branches[1] = new CodeCondBranch(_CG => CalcIfAssembly(_CG, i + 1));
 
-					CG.EmitCondition(Cond, Branches[0], Branches[1], NextLabel: NextLabel);
+					CG.EmitCondition(Cond, Branches[0], Branches[1], nextLabel: NextLabel);
 					break;
 				}
 				else if (Res == ConditionResult.True)

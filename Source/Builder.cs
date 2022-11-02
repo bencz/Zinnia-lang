@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Diagnostics;
+using Zinnia.Base;
 using Zinnia.Languages.Zinnia;
 using Zinnia.x86;
 

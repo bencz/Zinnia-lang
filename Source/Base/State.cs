@@ -5,6 +5,7 @@ using System.IO;
 using System.Globalization;
 using System.Reflection;
 using System.Linq;
+using Zinnia.Base;
 
 namespace Zinnia
 {
