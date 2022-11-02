@@ -1,330 +1,324 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Zinnia.Base;
 
-namespace Zinnia.Recognizers
+namespace Zinnia.Recognizers;
+
+public interface IBuiltinFuncRecognizer
 {
-	public interface IBuiltinFuncRecognizer
-	{
-		ExprRecResult Recognize(CodeString Code, CodeString Function, CodeString[] Params,
-			CodeString[] GenericParams, PluginRoot Plugin, ref ExpressionNode Out);
-	}
+    ExprRecResult Recognize(CodeString Code, CodeString Function, CodeString[] Params,
+        CodeString[] GenericParams, PluginRoot Plugin, ref ExpressionNode Out);
+}
 
-	public class StackAllocRecognizer : IBuiltinFuncRecognizer
-	{
-		public ExprRecResult Recognize(CodeString Code, CodeString Function, CodeString[] Params,
-			CodeString[] GenericParams, PluginRoot Plugin, ref ExpressionNode Out)
-		{
-			if (Function.IsEqual("stackalloc"))
-			{
-				var State = Plugin.State;
+public class StackAllocRecognizer : IBuiltinFuncRecognizer
+{
+    public ExprRecResult Recognize(CodeString Code, CodeString Function, CodeString[] Params,
+        CodeString[] GenericParams, PluginRoot Plugin, ref ExpressionNode Out)
+    {
+        if (Function.IsEqual("stackalloc"))
+        {
+            var State = Plugin.State;
 
-				if (GenericParams != null && GenericParams.Length != 0)
-				{
-					State.Messages.Add(MessageId.NonGenericIdentifier, Function);
-					return ExprRecResult.Failed;
-				}
+            if (GenericParams != null && GenericParams.Length != 0)
+            {
+                State.Messages.Add(MessageId.NonGenericIdentifier, Function);
+                return ExprRecResult.Failed;
+            }
 
-				if (Params.Length != 1)
-				{
-					State.Messages.Add(MessageId.ParamCount, Code);
-					return ExprRecResult.Failed;
-				}
+            if (Params.Length != 1)
+            {
+                State.Messages.Add(MessageId.ParamCount, Code);
+                return ExprRecResult.Failed;
+            }
 
-				var Bytes = Expressions.Recognize(Params[0], Plugin, true);
-				if (Bytes == null) return ExprRecResult.Failed;
+            var Bytes = Expressions.Recognize(Params[0], Plugin, true);
+            if (Bytes == null) return ExprRecResult.Failed;
 
-				var Ch = new ExpressionNode[] { Bytes };
-				Out = new OpExpressionNode(Operator.StackAlloc, Ch, Code);
-				return ExprRecResult.Succeeded;
-			}
+            var Ch = new[] { Bytes };
+            Out = new OpExpressionNode(Operator.StackAlloc, Ch, Code);
+            return ExprRecResult.Succeeded;
+        }
 
-			return ExprRecResult.Unknown;
-		}
-	}
+        return ExprRecResult.Unknown;
+    }
+}
 
-	public class IncBinRecognizer : IBuiltinFuncRecognizer
-	{
-		private IncludedBinary GetIncBin(CodeString Code, PluginRoot Plugin)
-		{
-			string String;
-			if (!Constants.RecognizeString(Code, Plugin, out String))
-				return null;
+public class IncBinRecognizer : IBuiltinFuncRecognizer
+{
+    public ExprRecResult Recognize(CodeString Code, CodeString Function, CodeString[] Params,
+        CodeString[] GenericParams, PluginRoot Plugin, ref ExpressionNode Out)
+    {
+        var State = Plugin.State;
+        var Container = Plugin.Container;
 
-			var Global = Plugin.Container.GlobalContainer;
-			var IncBin = Global.GetIncludedBinary(String);
+        int Func;
+        if (Function.IsEqual("incbin_ptr")) Func = 0;
+        else if (Function.IsEqual("incbin_size")) Func = 1;
+        else return ExprRecResult.Unknown;
 
-			if (IncBin == null)
-			{
-				Plugin.State.Messages.Add(MessageId.UnknownId, Code);
-				return null;
-			}
+        if (GenericParams != null && GenericParams.Length != 0)
+        {
+            State.Messages.Add(MessageId.NonGenericIdentifier, Function);
+            return ExprRecResult.Failed;
+        }
 
-			return IncBin;
-		}
+        if (Params.Length != 1)
+        {
+            State.Messages.Add(MessageId.ParamCount, Code);
+            return ExprRecResult.Failed;
+        }
 
-		public ExprRecResult Recognize(CodeString Code, CodeString Function, CodeString[] Params,
-			CodeString[] GenericParams, PluginRoot Plugin, ref ExpressionNode Out)
-		{
-			var State = Plugin.State;
-			var Container = Plugin.Container;
+        var IncBin = GetIncBin(Params[0], Plugin);
+        if (IncBin == null) return ExprRecResult.Failed;
 
-			int Func;
-			if (Function.IsEqual("incbin_ptr")) Func = 0;
-			else if (Function.IsEqual("incbin_size")) Func = 1;
-			else return ExprRecResult.Unknown;
+        if (Func == 0)
+        {
+            Out = new DataPointerNode(Code, IncBin);
+        }
+        else if (Func == 1)
+        {
+            var Type = Container.GlobalContainer.CommonIds.UIntPtr;
+            Out = new ConstExpressionNode(Type, new IntegerValue(IncBin.Length), Code);
+        }
+        else
+        {
+            throw new ApplicationException();
+        }
 
-			if (GenericParams != null && GenericParams.Length != 0)
-			{
-				State.Messages.Add(MessageId.NonGenericIdentifier, Function);
-				return ExprRecResult.Failed;
-			}
+        return ExprRecResult.Succeeded;
+    }
 
-			if (Params.Length != 1)
-			{
-				State.Messages.Add(MessageId.ParamCount, Code);
-				return ExprRecResult.Failed;
-			}
+    private IncludedBinary GetIncBin(CodeString Code, PluginRoot Plugin)
+    {
+        string String;
+        if (!Constants.RecognizeString(Code, Plugin, out String))
+            return null;
 
-			var IncBin = GetIncBin(Params[0], Plugin);
-			if (IncBin == null) return ExprRecResult.Failed;
+        var Global = Plugin.Container.GlobalContainer;
+        var IncBin = Global.GetIncludedBinary(String);
 
-			if (Func == 0)
-			{
-				Out = new DataPointerNode(Code, IncBin);
-			}
-			else if (Func == 1)
-			{
-                var Type = Container.GlobalContainer.CommonIds.UIntPtr;
-				Out = new ConstExpressionNode(Type, new IntegerValue(IncBin.Length), Code);
-			}
-			else
-			{
-				throw new ApplicationException();
-			}
+        if (IncBin == null)
+        {
+            Plugin.State.Messages.Add(MessageId.UnknownId, Code);
+            return null;
+        }
 
-			return ExprRecResult.Succeeded;
-		}
-	}
+        return IncBin;
+    }
+}
 
-	public class DataPointerRecognizer : IBuiltinFuncRecognizer
-	{
-		public ExprRecResult Recognize(CodeString Code, CodeString Function, CodeString[] Params,
-			CodeString[] GenericParams, PluginRoot Plugin, ref ExpressionNode Out)
-		{
-			var State = Plugin.State;
-			if (Function.IsEqual("id_desc_ptr"))
-			{
-				if (GenericParams != null && GenericParams.Length != 0)
-				{
-					State.Messages.Add(MessageId.NonGenericIdentifier, Function);
-					return ExprRecResult.Failed;
-				}
+public class DataPointerRecognizer : IBuiltinFuncRecognizer
+{
+    public ExprRecResult Recognize(CodeString Code, CodeString Function, CodeString[] Params,
+        CodeString[] GenericParams, PluginRoot Plugin, ref ExpressionNode Out)
+    {
+        var State = Plugin.State;
+        if (Function.IsEqual("id_desc_ptr"))
+        {
+            if (GenericParams != null && GenericParams.Length != 0)
+            {
+                State.Messages.Add(MessageId.NonGenericIdentifier, Function);
+                return ExprRecResult.Failed;
+            }
 
-				if (Params.Length != 1)
-				{
-					State.Messages.Add(MessageId.ParamCount, Code);
-					return ExprRecResult.Failed;
-				}
+            if (Params.Length != 1)
+            {
+                State.Messages.Add(MessageId.ParamCount, Code);
+                return ExprRecResult.Failed;
+            }
 
-				var Container = Plugin.Container;
-				var Id = Container.RecognizeIdentifier(Params[0]);
-				if (Id == null) return ExprRecResult.Failed;
+            var Container = Plugin.Container;
+            var Id = Container.RecognizeIdentifier(Params[0]);
+            if (Id == null) return ExprRecResult.Failed;
 
-				Out = new DataPointerNode(Code, Id);
-				return ExprRecResult.Succeeded;
-			}
+            Out = new DataPointerNode(Code, Id);
+            return ExprRecResult.Succeeded;
+        }
 
-			if (Function.IsEqual("assembly_desc_ptr"))
-			{
-				var Global = Plugin.Container.GlobalContainer;
-				if (GenericParams != null && GenericParams.Length != 0)
-				{
-					State.Messages.Add(MessageId.NonGenericIdentifier, Function);
-					return ExprRecResult.Failed;
-				}
+        if (Function.IsEqual("assembly_desc_ptr"))
+        {
+            var Global = Plugin.Container.GlobalContainer;
+            if (GenericParams != null && GenericParams.Length != 0)
+            {
+                State.Messages.Add(MessageId.NonGenericIdentifier, Function);
+                return ExprRecResult.Failed;
+            }
 
-				if (Params.Length == 0)
-				{
-					Out = new DataPointerNode(Code, Global.OutputAssembly);
-					return ExprRecResult.Succeeded;
-				}
-				else
-				{
-					if (Params.Length != 1)
-					{
-						State.Messages.Add(MessageId.ParamCount, Code);
-						return ExprRecResult.Failed;
-					}
+            if (Params.Length == 0)
+            {
+                Out = new DataPointerNode(Code, Global.OutputAssembly);
+                return ExprRecResult.Succeeded;
+            }
 
-					string String;
-					if (!Constants.RecognizeString(Params[0], Plugin, out String))
-						return ExprRecResult.Failed;
+            if (Params.Length != 1)
+            {
+                State.Messages.Add(MessageId.ParamCount, Code);
+                return ExprRecResult.Failed;
+            }
 
-					var Assembly = Global.GetAssembly(String);
-					if (Assembly == null)
-					{
-						State.Messages.Add(MessageId.UnknownId, Params[0]);
-						return ExprRecResult.Failed;
-					}
+            string String;
+            if (!Constants.RecognizeString(Params[0], Plugin, out String))
+                return ExprRecResult.Failed;
 
-					Out = new DataPointerNode(Code, Assembly);
-					return ExprRecResult.Succeeded;
-				}
-			}
+            var Assembly = Global.GetAssembly(String);
+            if (Assembly == null)
+            {
+                State.Messages.Add(MessageId.UnknownId, Params[0]);
+                return ExprRecResult.Failed;
+            }
 
-			return ExprRecResult.Unknown;
-		}
-	}
+            Out = new DataPointerNode(Code, Assembly);
+            return ExprRecResult.Succeeded;
+        }
 
-	public class DefaultRecognizer : IBuiltinFuncRecognizer
-	{
-		public ExprRecResult Recognize(CodeString Code, CodeString Function, CodeString[] Params,
-			CodeString[] GenericParams, PluginRoot Plugin, ref ExpressionNode Out)
-		{
-			if (Function.IsEqual("default"))
-			{
-				var State = Plugin.State;
-				if (GenericParams != null && GenericParams.Length != 0)
-				{
-					State.Messages.Add(MessageId.NonGenericIdentifier, Function);
-					return ExprRecResult.Failed;
-				}
+        return ExprRecResult.Unknown;
+    }
+}
 
-				if (Params.Length != 1)
-				{
-					State.Messages.Add(MessageId.ParamCount, Code);
-					return ExprRecResult.Failed;
-				}
+public class DefaultRecognizer : IBuiltinFuncRecognizer
+{
+    public ExprRecResult Recognize(CodeString Code, CodeString Function, CodeString[] Params,
+        CodeString[] GenericParams, PluginRoot Plugin, ref ExpressionNode Out)
+    {
+        if (Function.IsEqual("default"))
+        {
+            var State = Plugin.State;
+            if (GenericParams != null && GenericParams.Length != 0)
+            {
+                State.Messages.Add(MessageId.NonGenericIdentifier, Function);
+                return ExprRecResult.Failed;
+            }
 
-				var Container = Plugin.Container;
-				var Type = Container.RecognizeIdentifier(Params[0], GetIdOptions.DefaultForType);
-				if (Type == null) return ExprRecResult.Failed;
+            if (Params.Length != 1)
+            {
+                State.Messages.Add(MessageId.ParamCount, Code);
+                return ExprRecResult.Failed;
+            }
 
-				Out = Constants.GetDefaultValue(Plugin, Type, Code);
-				return Out == null ? ExprRecResult.Failed : ExprRecResult.Ready;
-			}
+            var Container = Plugin.Container;
+            var Type = Container.RecognizeIdentifier(Params[0], GetIdOptions.DefaultForType);
+            if (Type == null) return ExprRecResult.Failed;
 
-			return ExprRecResult.Unknown;
-		}
-	}
+            Out = Constants.GetDefaultValue(Plugin, Type, Code);
+            return Out == null ? ExprRecResult.Failed : ExprRecResult.Ready;
+        }
 
-	public class ReinterpretCastRecognizer : IBuiltinFuncRecognizer
-	{
-		public ExprRecResult Recognize(CodeString Code, CodeString Function, CodeString[] Params,
-			CodeString[] GenericParams, PluginRoot Plugin, ref ExpressionNode Out)
-		{
-			if (Function.IsEqual("reinterpret_cast"))
-			{
-				var State = Plugin.State;
-				var Container = Plugin.Container;
+        return ExprRecResult.Unknown;
+    }
+}
 
-				if (GenericParams == null || GenericParams.Length != 1)
-				{
-					State.Messages.Add(MessageId.GenericParamCount, Code);
-					return ExprRecResult.Failed;
-				}
+public class ReinterpretCastRecognizer : IBuiltinFuncRecognizer
+{
+    public ExprRecResult Recognize(CodeString Code, CodeString Function, CodeString[] Params,
+        CodeString[] GenericParams, PluginRoot Plugin, ref ExpressionNode Out)
+    {
+        if (Function.IsEqual("reinterpret_cast"))
+        {
+            var State = Plugin.State;
+            var Container = Plugin.Container;
 
-				if (Params.Length != 1)
-				{
-					State.Messages.Add(MessageId.ParamCount, Code);
-					return ExprRecResult.Failed;
-				}
+            if (GenericParams == null || GenericParams.Length != 1)
+            {
+                State.Messages.Add(MessageId.GenericParamCount, Code);
+                return ExprRecResult.Failed;
+            }
 
-                var Options = GetIdOptions.DefaultForType;
-                var Type = Identifiers.Recognize(Container, GenericParams[0], Options);
-                if (Type == null) return ExprRecResult.Failed;
+            if (Params.Length != 1)
+            {
+                State.Messages.Add(MessageId.ParamCount, Code);
+                return ExprRecResult.Failed;
+            }
 
-				var Child = Expressions.Recognize(Params[0], Plugin, true);
-                var TypeNode = Plugin.NewNode(new IdExpressionNode(Type, GenericParams[0]));
-                if (Child == null || TypeNode == null) return ExprRecResult.Failed;
+            var Options = GetIdOptions.DefaultForType;
+            var Type = Identifiers.Recognize(Container, GenericParams[0], Options);
+            if (Type == null) return ExprRecResult.Failed;
 
-				Out = new OpExpressionNode(Operator.Reinterpret, Code);
-                Out.Children = new ExpressionNode[] { Child, TypeNode };
-				return ExprRecResult.Succeeded;
-			}
+            var Child = Expressions.Recognize(Params[0], Plugin, true);
+            var TypeNode = Plugin.NewNode(new IdExpressionNode(Type, GenericParams[0]));
+            if (Child == null || TypeNode == null) return ExprRecResult.Failed;
 
-			return ExprRecResult.Unknown;
-		}
-	}
+            Out = new OpExpressionNode(Operator.Reinterpret, Code);
+            Out.Children = new[] { Child, TypeNode };
+            return ExprRecResult.Succeeded;
+        }
 
-	public class IsDefinedRecognizer : IBuiltinFuncRecognizer
-	{
-		public ExprRecResult Recognize(CodeString Code, CodeString Function, CodeString[] Params,
-			CodeString[] GenericParams, PluginRoot Plugin, ref ExpressionNode Out)
-		{
-			if (Function.IsEqual("defined"))
-			{
-				var State = Plugin.State;
-				if (GenericParams != null && GenericParams.Length != 0)
-				{
-					State.Messages.Add(MessageId.NonGenericIdentifier, Function);
-					return ExprRecResult.Failed;
-				}
+        return ExprRecResult.Unknown;
+    }
+}
 
-				if (Params.Length != 1)
-				{
-					State.Messages.Add(MessageId.ParamCount, Code);
-					return ExprRecResult.Failed;
-				}
+public class IsDefinedRecognizer : IBuiltinFuncRecognizer
+{
+    public ExprRecResult Recognize(CodeString Code, CodeString Function, CodeString[] Params,
+        CodeString[] GenericParams, PluginRoot Plugin, ref ExpressionNode Out)
+    {
+        if (Function.IsEqual("defined"))
+        {
+            var State = Plugin.State;
+            if (GenericParams != null && GenericParams.Length != 0)
+            {
+                State.Messages.Add(MessageId.NonGenericIdentifier, Function);
+                return ExprRecResult.Failed;
+            }
 
-                var Preprocessor = State.GlobalContainer.Preprocessor;
-                var Defined = Preprocessor.GetMacro(Params[0].ToString()) != null;
-				Out = Constants.GetBoolValue(Plugin.Container, Defined, Code);
-				if (Out == null) return ExprRecResult.Failed;
-				return ExprRecResult.Succeeded;
-			}
+            if (Params.Length != 1)
+            {
+                State.Messages.Add(MessageId.ParamCount, Code);
+                return ExprRecResult.Failed;
+            }
 
-			return ExprRecResult.Unknown;
-		}
-	}
+            var Preprocessor = State.GlobalContainer.Preprocessor;
+            var Defined = Preprocessor.GetMacro(Params[0].ToString()) != null;
+            Out = Constants.GetBoolValue(Plugin.Container, Defined, Code);
+            if (Out == null) return ExprRecResult.Failed;
+            return ExprRecResult.Succeeded;
+        }
 
-	public class SizeOfRecognizer : IBuiltinFuncRecognizer
-	{
-		public bool AllowVariables = false;
+        return ExprRecResult.Unknown;
+    }
+}
 
-		public ExprRecResult Recognize(CodeString Code, CodeString Function, CodeString[] Params,
-			CodeString[] GenericParams, PluginRoot Plugin, ref ExpressionNode Out)
-		{
-			if (Function.IsEqual("sizeof"))
-			{
-				var State = Plugin.State;
-				if (GenericParams != null && GenericParams.Length != 0)
-				{
-					State.Messages.Add(MessageId.NonGenericIdentifier, Function);
-					return ExprRecResult.Failed;
-				}
+public class SizeOfRecognizer : IBuiltinFuncRecognizer
+{
+    public bool AllowVariables = false;
 
-				if (Params.Length != 1)
-				{
-					State.Messages.Add(MessageId.ParamCount, Code);
-					return ExprRecResult.Failed;
-				}
+    public ExprRecResult Recognize(CodeString Code, CodeString Function, CodeString[] Params,
+        CodeString[] GenericParams, PluginRoot Plugin, ref ExpressionNode Out)
+    {
+        if (Function.IsEqual("sizeof"))
+        {
+            var State = Plugin.State;
+            if (GenericParams != null && GenericParams.Length != 0)
+            {
+                State.Messages.Add(MessageId.NonGenericIdentifier, Function);
+                return ExprRecResult.Failed;
+            }
 
-				var Options = GetIdOptions.Default;
-				Options.Func = x => x.RealId is Type || (x.RealId is Variable && AllowVariables);
+            if (Params.Length != 1)
+            {
+                State.Messages.Add(MessageId.ParamCount, Code);
+                return ExprRecResult.Failed;
+            }
 
-				var Id = Plugin.Container.RecognizeIdentifier(Params[0], Options);
-				if (Id == null) return ExprRecResult.Failed;
+            var Options = GetIdOptions.Default;
+            Options.Func = x => x.RealId is Type || (x.RealId is Variable && AllowVariables);
 
-                Type Type = null;
-                if (Id.RealId is Variable && AllowVariables)
-                    Type = Id.TypeOfSelf.RealId as Type;
-                else Type = Id.RealId as Type;
+            var Id = Plugin.Container.RecognizeIdentifier(Params[0], Options);
+            if (Id == null) return ExprRecResult.Failed;
 
-				if (Type == null)
-				{
-					State.Messages.Add(MessageId.CannotGetSize, Params[0]);
-					return ExprRecResult.Failed;
-				}
+            Type Type = null;
+            if (Id.RealId is Variable && AllowVariables)
+                Type = Id.TypeOfSelf.RealId as Type;
+            else Type = Id.RealId as Type;
 
-				Out = Constants.GetIntValue(Plugin.Container, Type.Size, Code, true);
-				return ExprRecResult.Succeeded;
-			}
+            if (Type == null)
+            {
+                State.Messages.Add(MessageId.CannotGetSize, Params[0]);
+                return ExprRecResult.Failed;
+            }
 
-			return ExprRecResult.Unknown;
-		}
-	}
+            Out = Constants.GetIntValue(Plugin.Container, Type.Size, Code, true);
+            return ExprRecResult.Succeeded;
+        }
+
+        return ExprRecResult.Unknown;
+    }
 }

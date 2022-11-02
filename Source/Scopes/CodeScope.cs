@@ -1,312 +1,304 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Linq;
 using Zinnia.Base;
 
-namespace Zinnia
+namespace Zinnia;
+
+public class WithScopeNode : CodeScopeNode
 {
-	public class WithScopeNode : CodeScopeNode
-	{
-		public Dictionary<Identifier, PackedMemberId> Ids = new Dictionary<Identifier, PackedMemberId>();
-		public ExpressionNode WithNode;
+    public Dictionary<Identifier, PackedMemberId> Ids = new();
+    public ExpressionNode WithNode;
 
-		public WithScopeNode(IdContainer Parent, CodeString Code, ExpressionNode Node)
-			: base(Parent, Code)
-		{
-			WithNode = Node;
-		}
+    public WithScopeNode(IdContainer Parent, CodeString Code, ExpressionNode Node)
+        : base(Parent, Code)
+    {
+        WithNode = Node;
+    }
 
-		public override bool GetContainerId(string Name, List<IdentifierFound> Out, Predicate<Identifier> Func = null)
-		{
-			var RetValue = base.GetContainerId(Name, Out, Func);
-			var Type = WithNode.Type as StructuredType;
+    public override bool GetContainerId(string Name, List<IdentifierFound> Out, Predicate<Identifier> Func = null)
+    {
+        var RetValue = base.GetContainerId(Name, Out, Func);
+        var Type = WithNode.Type as StructuredType;
 
-			foreach (var e in Identifiers.SearchMember(this, Type, Name, Func))
-			{
-				PackedMemberId Id;
-				if (!Ids.TryGetValue(e.Identifier, out Id))
-				{
-					Id = new PackedMemberId(this, new CodeString(),
-						e.Identifier.TypeOfSelf, WithNode, e.Identifier);
+        foreach (var e in Identifiers.SearchMember(this, Type, Name, Func))
+        {
+            PackedMemberId Id;
+            if (!Ids.TryGetValue(e.Identifier, out Id))
+            {
+                Id = new PackedMemberId(this, new CodeString(),
+                    e.Identifier.TypeOfSelf, WithNode, e.Identifier);
 
-					Ids.Add(e.Identifier, Id);
-				}
+                Ids.Add(e.Identifier, Id);
+            }
 
-				if (Func(Id))
-				{
-					Out.Add(new IdentifierFound(this, Id));
-					RetValue = true;
-				}
-			}
+            if (Func(Id))
+            {
+                Out.Add(new IdentifierFound(this, Id));
+                RetValue = true;
+            }
+        }
 
-			return RetValue;
-		}
-	}
-	
-	public class CodeScopeNode : ScopeNode
-	{
-		public bool DisableLastChild;
-		public IFinishableCommRecognizer LastCommRecognizer;
-		public IdContainer LastAddedContainer;
-		public CheckingMode CheckingMode;
+        return RetValue;
+    }
+}
 
-		public override bool IsAlreadyDefined(string Name, Predicate<Identifier> Func = null)
-		{
-			Predicate<IdContainer> ContainerFunc = x =>
-				Identifiers.Search(x, x.IdentifierList, Name, Func).Count == 0;
+public class CodeScopeNode : ScopeNode
+{
+    public CheckingMode CheckingMode;
+    public bool DisableLastChild;
+    public IdContainer LastAddedContainer;
+    public IFinishableCommRecognizer LastCommRecognizer;
 
-			return !TrueForAllParent<IdContainer>(ContainerFunc, FunctionScope.Parent);
-		}
+    public CodeScopeNode(IdContainer Parent, CodeString Code)
+        : base(Parent, Code)
+    {
+        var CodeScopeParent = GetParent<CodeScopeNode>(FunctionScope);
+        if (CodeScopeParent != null) CheckingMode = CodeScopeParent.CheckingMode;
+    }
 
-		public bool AddFinishableCommand(IdContainer Container, IFinishableCommRecognizer Recognizer)
-		{
-			if (!FinishLastCommand())
-				return false;
+    public IdContainer LastChild
+    {
+        get
+        {
+            var CommCount = Children.Count;
+            if (CommCount > 0 && !DisableLastChild)
+                return Children[CommCount - 1];
+            return null;
+        }
+    }
 
-			LastAddedContainer = Container;
-			LastCommRecognizer = Recognizer;
+    public override bool IsAlreadyDefined(string Name, Predicate<Identifier> Func = null)
+    {
+        Predicate<IdContainer> ContainerFunc = x =>
+            Identifiers.Search(x, x.IdentifierList, Name, Func).Count == 0;
 
-			DisableLastChild = false;
-			Children.Add(Container);
-			return true;
-		}
+        return !TrueForAllParent(ContainerFunc, FunctionScope.Parent);
+    }
 
-		public bool AddCommand(IdContainer Container)
-		{
-			if (!FinishLastCommand())
-				return false;
+    public bool AddFinishableCommand(IdContainer Container, IFinishableCommRecognizer Recognizer)
+    {
+        if (!FinishLastCommand())
+            return false;
 
-			DisableLastChild = false;
-			Children.Add(Container);
-			return true;
-		}
+        LastAddedContainer = Container;
+        LastCommRecognizer = Recognizer;
 
-		public bool FinishLastCommand()
-		{
-			if (LastCommRecognizer != null)
-			{
-				LastCommRecognizer.Finish(LastAddedContainer);
-				MarkFinished();
-			}
+        DisableLastChild = false;
+        Children.Add(Container);
+        return true;
+    }
 
-			return true;
-		}
+    public bool AddCommand(IdContainer Container)
+    {
+        if (!FinishLastCommand())
+            return false;
 
-		public void MarkFinished()
-		{
-			LastAddedContainer = null;
-			LastCommRecognizer = null;
-		}
+        DisableLastChild = false;
+        Children.Add(Container);
+        return true;
+    }
 
-		public bool BasicConstructorCommands()
-		{
-			if (FunctionScope.ConstructorCall != null)
-			{
-				Children.Add(new Command(this, FunctionScope.ConstructorCall.Code, CommandType.Expression)
-				{
-					Expressions = new List<ExpressionNode>() { FunctionScope.ConstructorCall },
-				});
-			}
+    public bool FinishLastCommand()
+    {
+        if (LastCommRecognizer != null)
+        {
+            LastCommRecognizer.Finish(LastAddedContainer);
+            MarkFinished();
+        }
 
-			return AssignInitValues();
-		}
+        return true;
+    }
 
-		public bool AssignInitValues()
-		{
-			var Plugin = GetPlugin();
-			var RetValue = true;
-			var Scope = FunctionScope.Parent;
+    public void MarkFinished()
+    {
+        LastAddedContainer = null;
+        LastCommRecognizer = null;
+    }
 
-			for (var i = 0; i < Scope.IdentifierList.Count; i++)
-			{
-				var Var = Scope.IdentifierList[i] as MemberVariable;
-				if (Var != null)
-				{
-					if (!Var.InitString.IsValid) continue;
+    public bool BasicConstructorCommands()
+    {
+        if (FunctionScope.ConstructorCall != null)
+            Children.Add(new Command(this, FunctionScope.ConstructorCall.Code, CommandType.Expression)
+            {
+                Expressions = new List<ExpressionNode> { FunctionScope.ConstructorCall }
+            });
 
-					Plugin.Reset();
-					if (!Var.CalcValue(Plugin, BeginEndMode.Both, true))
-						RetValue = false;
+        return AssignInitValues();
+    }
 
-					Children.Add(new Command(this, Var.InitString, CommandType.Expression)
-					{
-						Expressions = new List<ExpressionNode>() { Var.InitValue }
-					});
-				}
-			}
+    public bool AssignInitValues()
+    {
+        var Plugin = GetPlugin();
+        var RetValue = true;
+        var Scope = FunctionScope.Parent;
 
-			return RetValue;
-		}
+        for (var i = 0; i < Scope.IdentifierList.Count; i++)
+        {
+            var Var = Scope.IdentifierList[i] as MemberVariable;
+            if (Var != null)
+            {
+                if (!Var.InitString.IsValid) continue;
 
-		public override Variable OnCreateVariable(CodeString Name, Identifier Type, List<Modifier> Mods = null)
-		{
-			var Ret = CreateVariableHelper(Name, Type, Mods);
-			if (Ret == null) Ret = new LocalVariable(this, Name, Type);
-			return Ret;
-		}
+                Plugin.Reset();
+                if (!Var.CalcValue(Plugin, BeginEndMode.Both, true))
+                    RetValue = false;
 
-		public override PluginRoot GetPlugin()
-		{
-			return new PluginForCodeScope(this);
-		}
+                Children.Add(new Command(this, Var.InitString, CommandType.Expression)
+                {
+                    Expressions = new List<ExpressionNode> { Var.InitValue }
+                });
+            }
+        }
 
-		public CodeScopeNode(IdContainer Parent, CodeString Code)
-			: base(Parent, Code)
-		{
-			var CodeScopeParent = GetParent<CodeScopeNode>(FunctionScope);
-			if (CodeScopeParent != null) CheckingMode = CodeScopeParent.CheckingMode;
-		}
+        return RetValue;
+    }
 
-		public bool Return(ExpressionNode Node, CodeString Code)
-		{
-			var FS = FunctionScope;
-			var VoidType = GlobalContainer.CommonIds.Void;
-			var RetType = FS.Type.RetType;
+    public override Variable OnCreateVariable(CodeString Name, Identifier Type, List<Modifier> Mods = null)
+    {
+        var Ret = CreateVariableHelper(Name, Type, Mods);
+        if (Ret == null) Ret = new LocalVariable(this, Name, Type);
+        return Ret;
+    }
 
-			if (Node != null)
-			{
-				var Func = FunctionScope.Function;
-				if (Func is Constructor || Func is Destructor)
-				{
-					State.Messages.Add(MessageId.CannotReturn, Code);
-					return false;
-				}
+    public override PluginRoot GetPlugin()
+    {
+        return new PluginForCodeScope(this);
+    }
 
-				if (RetType.RealId is VoidType)
-				{
-					var TypeStrs = new[] { Node.Type.Name.ToString(), RetType.Name.ToString() };
-					State.Messages.Add(MessageId.CannotConvert, Code, TypeStrs);
-					return false;
-				}
+    public bool Return(ExpressionNode Node, CodeString Code)
+    {
+        var FS = FunctionScope;
+        var VoidType = GlobalContainer.CommonIds.Void;
+        var RetType = FS.Type.RetType;
 
-				Children.Add(new Command(this, Code, CommandType.Return)
-				{
-					Expressions = new List<ExpressionNode>() { Node },
-					Label = FS.ReturnLabel,
-				});
-			}
-			else
-			{
-				if (FS.NeedsReturnVal)
-				{
-					var TypeStrs = new[] { VoidType.Name.ToString(), RetType.Name.ToString() };
-					State.Messages.Add(MessageId.CannotConvert, Code, TypeStrs);
-					return false;
-				}
+        if (Node != null)
+        {
+            var Func = FunctionScope.Function;
+            if (Func is Constructor || Func is Destructor)
+            {
+                State.Messages.Add(MessageId.CannotReturn, Code);
+                return false;
+            }
 
-				if (!CopyRetVal(Code)) 
-					return false;
+            if (RetType.RealId is VoidType)
+            {
+                var TypeStrs = new[] { Node.Type.Name.ToString(), RetType.Name.ToString() };
+                State.Messages.Add(MessageId.CannotConvert, Code, TypeStrs);
+                return false;
+            }
 
-				Children.Add(new Command(this, Code, CommandType.Return)
-				{
-					Label = FS.ReturnLabel,
-				});
-			}
+            Children.Add(new Command(this, Code, CommandType.Return)
+            {
+                Expressions = new List<ExpressionNode> { Node },
+                Label = FS.ReturnLabel
+            });
+        }
+        else
+        {
+            if (FS.NeedsReturnVal)
+            {
+                var TypeStrs = new[] { VoidType.Name.ToString(), RetType.Name.ToString() };
+                State.Messages.Add(MessageId.CannotConvert, Code, TypeStrs);
+                return false;
+            }
 
-			return true;
-		}
+            if (!CopyRetVal(Code))
+                return false;
 
-		public IdContainer LastChild
-		{
-			get
-			{
-				var CommCount = Children.Count;
-				if (CommCount > 0 && !DisableLastChild)
-					return Children[CommCount - 1];
-				else return null;
-			}
-		}
+            Children.Add(new Command(this, Code, CommandType.Return)
+            {
+                Label = FS.ReturnLabel
+            });
+        }
 
-		public bool RecognizeCommand(CodeString Code)
-		{
-			var Recs = State.Language.CommRecognizers;
-            for (var i = 0; i < Recs.Length; i++)
-			{
-				var Res = Recs[i].Recognize(this, Code);
-				if (Res != SimpleRecResult.Unknown)
-					return Res != SimpleRecResult.Failed;
-			}
+        return true;
+    }
 
-			State.Messages.Add(MessageId.NotExpected, Code);
-			return false;
-		}
+    public bool RecognizeCommand(CodeString Code)
+    {
+        var Recs = State.Language.CommRecognizers;
+        for (var i = 0; i < Recs.Length; i++)
+        {
+            var Res = Recs[i].Recognize(this, Code);
+            if (Res != SimpleRecResult.Unknown)
+                return Res != SimpleRecResult.Failed;
+        }
 
-		public bool CopyRetVal(CodeString Code, Identifier Id)
-		{
-			var Plugin = GetPlugin();
-			if (!Plugin.Begin()) return false;
+        State.Messages.Add(MessageId.NotExpected, Code);
+        return false;
+    }
 
-			var Node = Plugin.NewNode(new IdExpressionNode(Id, Code));
-			if (Node == null || Plugin.End(ref Node) == PluginResult.Failed) 
-				return false;
+    public bool CopyRetVal(CodeString Code, Identifier Id)
+    {
+        var Plugin = GetPlugin();
+        if (!Plugin.Begin()) return false;
 
-			Children.Add(new Command(this, Code, CommandType.Return)
-			{
-				Expressions = new List<ExpressionNode>() { Node },
-				Label = FunctionScope.ReturnLabel,
-			});
+        var Node = Plugin.NewNode(new IdExpressionNode(Id, Code));
+        if (Node == null || Plugin.End(ref Node) == PluginResult.Failed)
+            return false;
 
-			return true;
-		}
+        Children.Add(new Command(this, Code, CommandType.Return)
+        {
+            Expressions = new List<ExpressionNode> { Node },
+            Label = FunctionScope.ReturnLabel
+        });
 
-		public bool CopyRetVal(CodeString Code, ExpressionNode SrcVar)
-		{
-			var Plugin = GetPlugin();
-			var Node = SrcVar.Copy(Plugin, Code: Code);
-			if (Node == null) return false;
+        return true;
+    }
 
-			Children.Add(new Command(this, Code, CommandType.Return)
-			{
-				Expressions = new List<ExpressionNode>() { Node },
-				Label = FunctionScope.ReturnLabel,
-			});
+    public bool CopyRetVal(CodeString Code, ExpressionNode SrcVar)
+    {
+        var Plugin = GetPlugin();
+        var Node = SrcVar.Copy(Plugin, Code: Code);
+        if (Node == null) return false;
 
-			return true;
-		}
+        Children.Add(new Command(this, Code, CommandType.Return)
+        {
+            Expressions = new List<ExpressionNode> { Node },
+            Label = FunctionScope.ReturnLabel
+        });
 
-		public bool CopyRetVal(CodeString Code)
-		{
-			var FS = FunctionScope;
-			if (!(FS.Type.RetType is VoidType))
-			{
-				if (FS.Function is Constructor) return CopyRetVal(Code, FS.SelfVariable);
-			}
+        return true;
+    }
 
-			return true;
-		}
+    public bool CopyRetVal(CodeString Code)
+    {
+        var FS = FunctionScope;
+        if (!(FS.Type.RetType is VoidType))
+            if (FS.Function is Constructor)
+                return CopyRetVal(Code, FS.SelfVariable);
 
-		public virtual bool ProcessCode()
-		{
-			if (!State.Language.CodeProcessor.Process(this))
-				return false;
+        return true;
+    }
 
-			return FinishLastCommand();
-		}
+    public virtual bool ProcessCode()
+    {
+        if (!State.Language.CodeProcessor.Process(this))
+            return false;
 
-		public override void GetAssembly(CodeGenerator CG, GetAssemblyMode Mode = GetAssemblyMode.Code)
-		{
-			CG.Container = this;
-			for (var i = 0; i < Children.Count; i++)
-				Children[i].GetAssembly(CG);
-		}
+        return FinishLastCommand();
+    }
 
-		public override bool DeclareVariables(Variable[] Variables, GetIdMode IdMode = GetIdMode.Everywhere)
-		{
-			var Ret = base.DeclareVariables(Variables, IdMode);
-            for (var i = 0; i < Variables.Length; i++)
-			{
-				var e = Variables[i];
-				if (e != null && e.InitValue != null)
-				{
-					Children.Add(new Command(this, e.InitString, CommandType.Expression)
-					{
-						Expressions = new List<ExpressionNode>() { e.InitValue },
-					});
-				}
-			}
+    public override void GetAssembly(CodeGenerator CG, GetAssemblyMode Mode = GetAssemblyMode.Code)
+    {
+        CG.Container = this;
+        for (var i = 0; i < Children.Count; i++)
+            Children[i].GetAssembly(CG);
+    }
 
-			return Ret;
-		}
-	}
+    public override bool DeclareVariables(Variable[] Variables, GetIdMode IdMode = GetIdMode.Everywhere)
+    {
+        var Ret = base.DeclareVariables(Variables, IdMode);
+        for (var i = 0; i < Variables.Length; i++)
+        {
+            var e = Variables[i];
+            if (e != null && e.InitValue != null)
+                Children.Add(new Command(this, e.InitString, CommandType.Expression)
+                {
+                    Expressions = new List<ExpressionNode> { e.InitValue }
+                });
+        }
+
+        return Ret;
+    }
 }

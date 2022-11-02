@@ -1,14 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Zinnia;
-using Zinnia.Recognizers;
-using Zinnia.Languages;
-using Zinnia.Languages.Zinnia;
+﻿namespace Zinnia.Languages.CSharp;
 
-namespace Zinnia.Languages.CSharp
-{/*
+
+/*
 	public struct CSharpCommand
 	{
 		public CodeString Code;
@@ -253,7 +246,7 @@ namespace Zinnia.Languages.CSharp
 				{
 					var Position = Line.Index + Result.Position;
 					var Right = Code.Substring(Position);
-					var EndPos = Right.Find("*//*", Handlers: SkippingHandlers); asdasd
+					var EndPos = Right.Find("*/ /*", Handlers: SkippingHandlers); asdasd
 
 					if (EndPos == -1)
 					{
@@ -628,4 +621,3 @@ namespace Zinnia.Languages.CSharp
 			Init();
 		}
 	}*/
-}
