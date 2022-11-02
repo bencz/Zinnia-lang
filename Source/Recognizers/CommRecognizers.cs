@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Zinnia.Base;
 using Zinnia.Languages.Zinnia;
 
 namespace Zinnia.Recognizers

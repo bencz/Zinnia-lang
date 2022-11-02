@@ -1,15 +1,14 @@
 ﻿using System;
-using System.IO;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Numerics;
-using System.Linq;
-using System.Text;
 using System.Collections;
-using System.Collections.ObjectModel;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Numerics;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
 
-namespace Zinnia
+namespace Zinnia.Base
 {
     public class ByRef<T>
     {

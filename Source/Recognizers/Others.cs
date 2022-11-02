@@ -1,4 +1,5 @@
 ﻿using System;
+using Zinnia.Base;
 
 namespace Zinnia.Recognizers
 {

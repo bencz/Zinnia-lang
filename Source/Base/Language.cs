@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
-namespace Zinnia
+namespace Zinnia.Base
 {
     public enum IdRecResult : byte
     {

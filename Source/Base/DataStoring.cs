@@ -1,11 +1,7 @@
 ﻿using System;
-using System.IO;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.Numerics;
-using System.Linq;
 
-namespace Zinnia
+namespace Zinnia.Base
 {
     public static class DataStoring
     {

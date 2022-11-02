@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Zinnia.Base;
 using Zinnia.Recognizers;
 
 namespace Zinnia
