@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Diagnostics;
-using System.Reflection;
-using System.Threading;
+using Zinnia.Languages.Zinnia;
+using Zinnia.x86;
 
 namespace Zinnia
 {
@@ -30,233 +30,235 @@ namespace Zinnia
 		public string Name;
 		public string File;
 
-		public IncBinReference(string Name, string File)
+		public IncBinReference(string name, string file)
 		{
-			this.Name = Name;
-			this.File = File;
+			Name = name;
+			File = file;
 		}
 	}
 
 	public class ZinniaBuilder
 	{
-		public IArchitecture Arch;
-		public Language Language;
-		public CompilerState State;
+		private IArchitecture _arch;
+		private Language _language;
+		private CompilerState _state;
 		public AssemblyFormat Format;
-		public bool ExecuteApp = false;
-		public bool DefaultLibs = true;
+		private bool _executeApp = false;
+		private bool _defaultLibs = true;
 
-		public string Dir;
-		public string ZinniaLib;
-		public string Entry;
-		public string OutFile;
+		private string _dir;
+		private string _zinniaLib;
+		private string _entry;
+		private string _outFile;
 
-		public string ObjFile;
-		public string AsmFile;
-		public string OutDir;
+		private string _objFile;
+		private string _asmFile;
+		private string _outDir;
 		public List<string> ObjectFiles;
 		public List<string> Archives;
-		public List<string> ZinniaFiles;
-		public List<AssemblyPath> Assemblies;
-		public List<IncBinReference> IncBins;
+		private List<string> _zinniaFiles;
+		private List<AssemblyPath> _assemblies;
+		private List<IncBinReference> _incBins;
 
-		public string ArchivesDir;
-		public string BinariesDir;
-		public string SamplesDir;
-		public string LibrariesDir;
-		public string Archiver;
-		public string Linker;
-		public string Assembler;
+		private string _archivesDir;
+		private string _binariesDir;
+		private string _samplesDir;
+		private string _librariesDir;
+		private string _archiver;
+		private string _linker;
+		private string _assembler;
 
-		public Dictionary<string, string> Macroes;
+		private Dictionary<string, string> _macroes;
 
-		public string ProcessString(string String)
+		public string ProcessString(string str)
 		{
-			foreach (var e in Macroes)
+			foreach (var e in _macroes.Where(e => str.Contains(e.Key)))
 			{
-				if (String.Contains(e.Key))
-					String = String.Replace(e.Key, e.Value);
+				str = str.Replace(e.Key, e.Value);
 			}
 
-			return String;
+			return str;
 		}
 
-		public static string ParentDirectory(string Dir, int Count)
+		public static string ParentDirectory(string dir, int count)
 		{
-			var First = true;
-			for (var i = Dir.Length - 1; i >= 0; i--)
+			var first = true;
+			for (var i = dir.Length - 1; i >= 0; i--)
 			{
-				if (Count == 0)
-					return Dir.Substring(0, i + 1);
+				if (count == 0)
+					return dir.Substring(0, i + 1);
 
-				var Chr = Dir[i];
-				if (Chr == Path.DirectorySeparatorChar)
+				var chr = dir[i];
+				if (chr == Path.DirectorySeparatorChar)
 				{
-					if (First)
+					if (first)
 						continue;
 
-					Count--;
+					count--;
 				}
-				else if (First)
+				else if (first)
 				{
-					First = false;
+					first = false;
 				}
 			}
 
-			return Dir;
+			return dir;
 		}
 
-		public static string GetDirectory(ZinniaDirectory Dir)
+		public static string GetDirectory(ZinniaDirectory dir)
 		{
-			string Name;
-			if (Dir == ZinniaDirectory.Archives) Name = "Archives";
-			else if (Dir == ZinniaDirectory.Binaries) Name = "Binaries";
-			else if (Dir == ZinniaDirectory.Samples) Name = "Samples";
-			else if (Dir == ZinniaDirectory.Libraries) Name = "Libraries";
-			else throw new ApplicationException();
+			var name = dir switch
+			{
+				ZinniaDirectory.Archives => "Archives",
+				ZinniaDirectory.Binaries => "Binaries",
+				ZinniaDirectory.Samples => "Samples",
+				ZinniaDirectory.Libraries => "Libraries",
+				_ => throw new ApplicationException()
+			};
 
-			var AppDir = System.Reflection.Assembly.GetExecutingAssembly().Location;
-			AppDir = Path.GetDirectoryName(AppDir);
+			var appDir = System.Reflection.Assembly.GetExecutingAssembly().Location;
+			appDir = Path.GetDirectoryName(appDir);
 
-			var Ret = Path.Combine(ParentDirectory(AppDir, 1), Name);
-			if (Directory.Exists(Ret)) return Ret;
+			var ret = Path.Combine(ParentDirectory(appDir, 1), name);
+			if (Directory.Exists(ret))
+				return ret;
 
-			Ret = Path.Combine(ParentDirectory(AppDir, 3), Name);
-			return Directory.Exists(Ret) ? Ret : null;
+			ret = Path.Combine(ParentDirectory(appDir, 3), name);
+			return Directory.Exists(ret) ? ret : null;
 		}
 
 		public ZinniaBuilder()
 		{
-			ArchivesDir = GetDirectory(ZinniaDirectory.Archives);
-			BinariesDir = GetDirectory(ZinniaDirectory.Binaries);
-			SamplesDir = GetDirectory(ZinniaDirectory.Samples);
-			LibrariesDir = GetDirectory(ZinniaDirectory.Libraries);
+			_archivesDir = GetDirectory(ZinniaDirectory.Archives);
+			_binariesDir = GetDirectory(ZinniaDirectory.Binaries);
+			_samplesDir = GetDirectory(ZinniaDirectory.Samples);
+			_librariesDir = GetDirectory(ZinniaDirectory.Libraries);
 
-			Archiver = Path.Combine(BinariesDir, "ar.exe");
-			Linker = Path.Combine(BinariesDir, "ld.exe");
-			Assembler = Path.Combine(BinariesDir, "fasm.exe");
+			_archiver = Path.Combine(_binariesDir, "ar.exe");
+			_linker = Path.Combine(_binariesDir, "ld.exe");
+			_assembler = Path.Combine(_binariesDir, "fasm.exe");
 
-			Macroes = new Dictionary<string, string>()
+			_macroes = new Dictionary<string, string>()
 			{
-				{"$(ZinniaArchiveDir)" , ArchivesDir},
-				{"$(ZinniaBinariesDir)" , BinariesDir},
-				{"$(ZinniaSamplesDir)" , SamplesDir},
-				{"$(ZinniaLibrariesDir)" , LibrariesDir},
+				{"$(ZinniaArchiveDir)" , _archivesDir},
+				{"$(ZinniaBinariesDir)" , _binariesDir},
+				{"$(ZinniaSamplesDir)" , _samplesDir},
+				{"$(ZinniaLibrariesDir)" , _librariesDir},
 			};
 		}
 
-		static string GetString(string[] Args, int i)
+		static string GetString(string[] args, int i)
 		{
-			if (i >= Args.Length)
+			if (i >= args.Length)
 			{
 				Console.WriteLine("Command line error");
 				return null;
 			}
 
-			var Ret = Args[i];
-			Args[i] = null;
+			var ret = args[i];
+			args[i] = null;
 
-			if (Ret.Length > 1 && Ret.StartsWith("\"") && Ret.EndsWith("\""))
-				return Ret.Substring(1, Ret.Length - 1);
+			if (ret.Length > 1 && ret.StartsWith("\"") && ret.EndsWith("\""))
+				return ret.Substring(1, ret.Length - 1);
 
-			return Ret;
+			return ret;
 		}
 
 		public void Reset()
 		{
 			ObjectFiles = new List<string>();
 			Archives = new List<string>();
-			ZinniaFiles = new List<string>();
-			Assemblies = new List<AssemblyPath>();
-			IncBins = new List<IncBinReference>();
+			_zinniaFiles = new List<string>();
+			_assemblies = new List<AssemblyPath>();
+			_incBins = new List<IncBinReference>();
 
-			Dir = ZinniaLib = Entry = OutFile = null;
-			Arch = null;
-			Language = null;
-			State = null;
+			_dir = _zinniaLib = _entry = _outFile = null;
+			_arch = null;
+			_language = null;
+			_state = null;
 			Format = AssemblyFormat.Unknown;
 		}
 
-		public bool ProcessArgs(string[] Args)
+		public bool ProcessArgs(string[] args)
 		{
-			ExecuteApp = false;
+			_executeApp = false;
 
-			for (var i = 0; i < Args.Length; i++)
-				if (Args[i] != null && Args[i].Length > 1 && (Args[i][0] == '-' || Args[i][0] == '/'))
+			for (var i = 0; i < args.Length; i++)
+				if (args[i] != null && args[i].Length > 1 && (args[i][0] == '-' || args[i][0] == '/'))
 				{
-					var Str = Args[i].Substring(1);
-					Args[i] = null;
+					var str = args[i].Substring(1);
+					args[i] = null;
 
-					if (Str[0] == 'l')
+					if (str[0] == 'l')
 					{
-						Assemblies.Add(new AssemblyPath(Str.Substring(1), true));
+						_assemblies.Add(new AssemblyPath(str.Substring(1), true));
 					}
-					else if (Str == "incbin")
+					else if (str == "incbin")
 					{
-						if (i + 2 >= Args.Length || Args[i + 2][0] == '-')
+						if (i + 2 >= args.Length || args[i + 2][0] == '-')
 						{
-							var File = GetString(Args, i + 1);
-							if (File == null) return false;
+							var file = GetString(args, i + 1);
+							if (file == null) return false;
 
-							var Name = Path.GetFileNameWithoutExtension(File);
-							IncBins.Add(new IncBinReference(Name, File));
+							var name = Path.GetFileNameWithoutExtension(file);
+							_incBins.Add(new IncBinReference(name, file));
 						}
 						else
 						{
-							var Name = GetString(Args, i + 1);
-							if (Name == null) return false;
+							var name = GetString(args, i + 1);
+							if (name == null) return false;
 
-							var File = GetString(Args, i + 2);
-							if (File == null)  return false;
+							var file = GetString(args, i + 2);
+							if (file == null) return false;
 
-							IncBins.Add(new IncBinReference(Name, File));
+							_incBins.Add(new IncBinReference(name, file));
 						}
 					}
-					else if (Str == "nodefaultlib")
+					else if (str == "nodefaultlib")
 					{
-						DefaultLibs = false;
+						_defaultLibs = false;
 					}
-					else if (Str == "x")
+					else if (str == "x")
 					{
-						ExecuteApp = true;
+						_executeApp = true;
 					}
-					else if (Str == "zlib")
+					else if (str == "zlib")
 					{
-						if ((ZinniaLib = GetString(Args, i + 1)) == null)
+						if ((_zinniaLib = GetString(args, i + 1)) == null) 
 							return false;
 					}
-					else if (Str == "entry")
+					else if (str == "entry")
 					{
-						if ((Entry = GetString(Args, i + 1)) == null)
+						if ((_entry = GetString(args, i + 1)) == null) 
 							return false;
 					}
-					else if (Str == "out")
+					else if (str == "out")
 					{
-						if ((OutFile = GetString(Args, i + 1)) == null)
+						if ((_outFile = GetString(args, i + 1)) == null) 
 							return false;
 					}
-					else if (Str == "dir")
+					else if (str == "dir")
 					{
-						if ((Dir = GetString(Args, i + 1)) == null)
+						if ((_dir = GetString(args, i + 1)) == null) 
 							return false;
 					}
-					else if (Str == "x86")
+					else if (str == "x86")
 					{
-						Arch = new x86.x86Architecture();
+						_arch = new x86Architecture();
 					}
-					else if (Str == "x86_64")
+					else if (str == "x86_64")
 					{
-						Arch = new x86.x86Architecture(x86.x86Extensions.Default64);
+						_arch = new x86Architecture(x86Extensions.Default64);
 					}
-					else if (Str == "zinnialang")
+					else if (str == "zinnialang")
 					{
-						Language = new Languages.Zinnia.ZinniaLanguage();
-					}/*
+						_language = new ZinniaLanguage();
+					} /*
 					else if (Str == "cslang")
 					{
 						Language = new Languages.CSharp.CSharpLanguage();
 					}*/
-					else if (Str == "format")
+					else if (str == "format")
 					{
 						if (Format != AssemblyFormat.Unknown)
 						{
@@ -264,21 +266,31 @@ namespace Zinnia
 							return false;
 						}
 
-						var S = GetString(Args, i + 1);
-						if (S == null) return false;
-						else if (S == "app") Format = AssemblyFormat.Application;
-						else if (S == "arc") Format = AssemblyFormat.Archive;
-						else if (S == "obj") Format = AssemblyFormat.Object;
+						var s = GetString(args, i + 1);
+						switch (s)
+						{
+							case null:
+								return false;
+							case "app":
+								Format = AssemblyFormat.Application;
+								break;
+							case "arc":
+								Format = AssemblyFormat.Archive;
+								break;
+							case "obj":
+								Format = AssemblyFormat.Object;
+								break;
+						}
 
 						if (Format == AssemblyFormat.Unknown)
 						{
-							Console.WriteLine("Unknown assembly format: " + S);
+							Console.WriteLine("Unknown assembly format: " + s);
 							return false;
 						}
 					}
 					else
 					{
-						Console.WriteLine("Unknown argument: " + Str);
+						Console.WriteLine("Unknown argument: " + str);
 						return false;
 					}
 				}
@@ -288,83 +300,74 @@ namespace Zinnia
 
 		public bool AdjustSettings()
 		{
-			if (Language == null) Language = new Languages.Zinnia.ZinniaLanguage();
-			if (Arch == null) Arch = new x86.x86Architecture();
+			_language ??= new Languages.Zinnia.ZinniaLanguage();
+			_arch ??= new x86.x86Architecture();
 			if (Format == AssemblyFormat.Unknown) Format = AssemblyFormat.Application;
-			if (Format == AssemblyFormat.Application && Entry == null) Entry = "Main";
+			if (Format == AssemblyFormat.Application && _entry == null) _entry = "Main";
 
-			if (DefaultLibs)
+			if (_defaultLibs)
 			{
-				Assemblies.Add(new AssemblyPath("ZinniaCore", true));
-				Assemblies.Add(new AssemblyPath("BlitzMax", true));
+				_assemblies.Add(new AssemblyPath("ZinniaCore", true));
+				_assemblies.Add(new AssemblyPath("BlitzMax", true));
 			}
 
-			if (Dir == null)
-			{
-				if (OutFile == null) Dir = Directory.GetCurrentDirectory();
-				else Dir = Path.GetDirectoryName(Path.GetFullPath(OutFile));
-			}
+			_dir ??= _outFile == null 
+				? Directory.GetCurrentDirectory() 
+				: Path.GetDirectoryName(Path.GetFullPath(_outFile));
 
-			if (State == null)
+			if (_state == null)
 			{
-				State = new CompilerState(this, Arch, Language);
+				_state = new CompilerState(this, _arch, _language);
 			}
 			else
 			{
-				State.Messages.Messages.Clear();
-				State.Arch = Arch;
-				State.Language = Language;
+				_state.Messages.Messages.Clear();
+				_state.Arch = _arch;
+				_state.Language = _language;
 			}
 
-			State.Entry = Entry;
-			State.Format = ImageFormat.MSCoff;
+			_state.Entry = _entry;
+			_state.Format = ImageFormat.MSCoff;
 
-			OutDir = Path.Combine(Dir, ".zinnia");
-			if (!Directory.Exists(OutDir)) Directory.CreateDirectory(OutDir);
+			if (_dir != null) 
+				_outDir = Path.Combine(_dir, ".zinnia");
+			
+			if (!Directory.Exists(_outDir))
+				Directory.CreateDirectory(_outDir);
 
-			if (OutFile == null)
+			_outFile ??= Format switch
 			{
-				if (Format == AssemblyFormat.Object)
-					OutFile = Path.Combine(OutDir, "Assembly.o");
-				else if (Format == AssemblyFormat.Archive)
-					OutFile = Path.Combine(OutDir, "Assembly.a");
-				else if (Format == AssemblyFormat.Application)
-					OutFile = Path.Combine(OutDir, "Assembly.exe");
-				else throw new ApplicationException();
-			}
+				AssemblyFormat.Object => Path.Combine(_outDir, "Assembly.o"),
+				AssemblyFormat.Archive => Path.Combine(_outDir, "Assembly.a"),
+				AssemblyFormat.Application => Path.Combine(_outDir, "Assembly.exe"),
+				_ => throw new ApplicationException()
+			};
 
-			if (ZinniaLib == null) ZinniaLib = Path.Combine(OutDir, "Assembly.zlib");
-			if (AsmFile == null) AsmFile = Path.Combine(OutDir, "Assembly.s");
-
-			if (ObjFile == null)
-			{
-				if (Format == AssemblyFormat.Object) ObjFile = OutFile;
-				else ObjFile = Path.Combine(OutDir, "Assembly.o");
-			}
+			_zinniaLib ??= Path.Combine(_outDir, "Assembly.zlib");
+			_asmFile ??= Path.Combine(_outDir, "Assembly.s");
+			_objFile ??= Format == AssemblyFormat.Object 
+				? _outFile 
+				: Path.Combine(_outDir, "Assembly.o");
 
 			return true;
 		}
 
-		public static CodeFile[] ReadLines(IEnumerable<string> Files, int TabSize)
-		{
-			var Result = new List<CodeFile>();
-			foreach (var e in Files)
-				Result.Add(new CodeFile(e, File.ReadAllText(e), TabSize));
+		public static CodeFile[] ReadLines(IEnumerable<string> files, int tabSize) 
+			=> files.Select(e => new CodeFile(e, File.ReadAllText(e), tabSize)).ToArray();
 
-			return Result.ToArray();
-		}
-
-		public static bool Run(string File, string Args, bool Hide = false, bool FailIfAppFails = true)
+		private static bool Run(string file, string args, bool hide = false, bool failIfAppFails = true)
 		{
-			var SInfo = new ProcessStartInfo(File, Args);
-			SInfo.CreateNoWindow = Hide;
-			SInfo.UseShellExecute = false;
+			var sInfo = new ProcessStartInfo(file, args)
+			{
+				CreateNoWindow = hide,
+				UseShellExecute = false
+			};
 
 			try
 			{
-				var Proc = Process.Start(SInfo);
-				Proc.WaitForExit();
-				return !FailIfAppFails || Proc.ExitCode == 0;
+				var proc = Process.Start(sInfo);
+				proc.WaitForExit();
+				return !failIfAppFails || proc.ExitCode == 0;
 			}
 			catch (Exception)
 			{
@@ -372,110 +375,106 @@ namespace Zinnia
 			}
 		}
 
-		public bool CreateAssembly(CodeFile[] CodeFiles)
+		private bool CreateAssembly(CodeFile[] codeFiles)
 		{
-			var RetValue = true;
-			State.SetOutput(AsmFile, ZinniaLib);
-			State.AssemblyName = Path.GetFileNameWithoutExtension(OutFile);
+			var retValue = true;
+			_state.SetOutput(_asmFile, _zinniaLib);
+			_state.AssemblyName = Path.GetFileNameWithoutExtension(_outFile);
 
-			if (State.Compile(CodeFiles, Assemblies, IncBins))
+			if (_state.Compile(codeFiles, _assemblies, _incBins))
 			{
-				Console.WriteLine(State.Strings["CompilingSucceded"]);
-				State.Messages.WriteToConsole();
+				Console.WriteLine(_state.Strings["CompilingSucceded"]);
+				_state.Messages.WriteToConsole();
 			}
 			else
 			{
-				Console.WriteLine(State.Strings["CompilingFailed"]);
-				State.Messages.WriteToConsole();
-				RetValue = false;
+				Console.WriteLine(_state.Strings["CompilingFailed"]);
+				_state.Messages.WriteToConsole();
+				retValue = false;
 			}
 
-			State.DisposeOutput();
-			return RetValue;
+			_state.DisposeOutput();
+			return retValue;
 		}
 
-		public string GetFilePath(string File, string FileDir)
+		public string GetFilePath(string file, string fileDir)
 		{
-			File = ProcessString(File);
-			if (!Path.IsPathRooted(File))
-				File = Path.Combine(FileDir, File);
+			file = ProcessString(file);
+			if (!Path.IsPathRooted(file))
+				file = Path.Combine(fileDir, file);
 
-			return File;
+			return file;
 		}
 
-		bool ProcessFileList(string File)
+		private bool ProcessFileList(string file)
 		{
-			var FileDir = Path.GetDirectoryName(Path.GetFullPath(File));
-			foreach (var Line in System.IO.File.ReadAllLines(File))
+			var fileDir = Path.GetDirectoryName(Path.GetFullPath(file));
+			return System.IO.File.ReadAllLines(file)
+				.Select(line => GetFilePath(line, fileDir))
+				.All(newLine => ProcessFile(newLine));
+		}
+
+		private bool ProcessFile(string file)
+		{
+			if (!System.IO.File.Exists(file))
 			{
-				var NewLine = GetFilePath(Line, FileDir);
-				if (!ProcessFile(NewLine)) return false;
-			}
-
-			return true;
-		}
-
-		bool ProcessFile(string File)
-		{
-			if (!System.IO.File.Exists(File))
-			{
-				Console.WriteLine("File not exists: \"" + File + "\"");
+				Console.WriteLine("File not exists: \"" + file + "\"");
 				return false;
 			}
 
-			var Ext = Path.GetExtension(File);
-			if (Ext == ".txt")
+			var ext = Path.GetExtension(file);
+			if (ext == ".txt")
 			{
-				if (!ProcessFileList(File))
+				if (!ProcessFileList(file))
 					return false;
 			}
-			else if (Ext == ".zinnia" || Ext == ".cs")
+			else if (ext == ".zinnia" || ext == ".cs")
 			{
-				ZinniaFiles.Add(File);
+				_zinniaFiles.Add(file);
 			}
-			else if (Ext == ".zlib")
+			else if (ext == ".zlib")
 			{
-				Assemblies.Add(new AssemblyPath(File));
+				_assemblies.Add(new AssemblyPath(file));
 			}
-			else if (Ext == ".a" || Ext == ".lib")
+			else if (ext == ".a" || ext == ".lib")
 			{
-				Archives.Add(File);
+				Archives.Add(file);
 			}
-			else if (Ext == ".o" || Ext == ".obj")
+			else if (ext == ".o" || ext == ".obj")
 			{
-				ObjectFiles.Add(File);
+				ObjectFiles.Add(file);
 			}
-			else if (Ext == ".c")
+			else if (ext == ".c")
 			{
-				Console.WriteLine("Compiling: " + File);
-				var o = Path.Combine(OutDir, Path.GetFileName(File) + ".o");
-				if (!Run("gcc", "-msse3 -mfpmath=sse -O3 -c \"" + File + "\" -o \"" + o + "\""))
+				Console.WriteLine("Compiling: " + file);
+				var o = Path.Combine(_outDir, Path.GetFileName(file) + ".o");
+				if (!Run("gcc", "-msse3 -mfpmath=sse -O3 -c \"" + file + "\" -o \"" + o + "\""))
 				{
-					Console.WriteLine("Failed to compile " + File);
-					return false;
-				}
-
-				ObjectFiles.Add(o);
-			}
-			else if (Ext == ".cpp")
-			{
-				Console.WriteLine("Compiling: " + File);
-				var o = Path.Combine(OutDir, Path.GetFileName(File) + ".o");
-				if (!Run("g++", "-msse3 -mfpmath=sse -O3 -std=c++0x -c \"" + File + "\" -o \"" + o + "\""))
-				{
-					Console.WriteLine("Failed to compile " + File);
+					Console.WriteLine("Failed to compile " + file);
 					return false;
 				}
 
 				ObjectFiles.Add(o);
 			}
-			else if (Ext == ".s" || Ext == ".asm")
+			else if (ext == ".cpp")
 			{
-				Console.WriteLine("Assembling: " + File);
-				var o = Path.Combine(OutDir, Path.GetFileName(File) + ".o");
-				if (!Run(Assembler, "\"" + File + "\" \"" + o + "\""))
+				Console.WriteLine("Compiling: " + file);
+				var o = Path.Combine(_outDir, Path.GetFileName(file) + ".o");
+				if (!Run("g++", "-msse3 -mfpmath=sse -O3 -std=c++0x -c \"" + file + "\" -o \"" + o + "\""))
 				{
-					Console.WriteLine("Failed to assemble " + File);
+					Console.WriteLine("Failed to compile " + file);
+					return false;
+				}
+
+				ObjectFiles.Add(o);
+			}
+			else if (ext == ".s" || ext == ".asm")
+			{
+				Console.WriteLine("Assembling: " + file);
+				var o = Path.Combine(_outDir, Path.GetFileName(file) + ".o");
+				if (!Run(_assembler, "\"" + file + "\" \"" + o + "\""))
+				{
+					Console.WriteLine("Failed to assemble " + file);
 					return false;
 				}
 
@@ -483,72 +482,72 @@ namespace Zinnia
 			}
 			else
 			{
-				Console.WriteLine("Unknown extension: " + Ext);
+				Console.WriteLine("Unknown extension: " + ext);
 				return false;
 			}
 
 			return true;
 		}
 
-		public bool Compile(string[] Args)
+		private bool Compile(string[] args)
 		{
-			var RetValue = true;
-			foreach (var Arg in Args)
+			var retValue = true;
+			foreach (var arg in args)
 			{
-				if (Arg != null && !ProcessFile(ProcessString(Arg)))
-					RetValue = false;
+				if (arg != null && !ProcessFile(ProcessString(arg)))
+					retValue = false;
 			}
 
-			if (!RetValue)
+			if (!retValue)
 				return false;
 
 			Console.WriteLine("Compiling: Zinnia files");
-			if (!CreateAssembly(ReadLines(ZinniaFiles, State.TabSize)))
+			if (!CreateAssembly(ReadLines(_zinniaFiles, _state.TabSize)))
 				return false;
 
-			if (ObjFile != null)
+			if (_objFile != null)
 			{
-				if (!Run(Assembler, "\"" + AsmFile + "\" \"" + ObjFile + "\""))
+				if (!Run(_assembler, "\"" + _asmFile + "\" \"" + _objFile + "\""))
 				{
-					Console.WriteLine("Failed to assemble \"" + AsmFile + "\"");
+					Console.WriteLine("Failed to assemble \"" + _asmFile + "\"");
 					return false;
 				}
 
-				ObjectFiles.Add(ObjFile);
+				ObjectFiles.Add(_objFile);
 			}
 
 			return true;
 		}
 
-		public bool LinkApp()
+		private bool LinkApp()
 		{
-			Console.WriteLine("Linking: " + OutFile);
-			var Script = Path.Combine(OutDir, "Link.txt");
-			var Writer = new StreamWriter(Script, false, Encoding.GetEncoding("iso-8859-1"));
-			Writer.WriteLine("INPUT(");
-			Writer.WriteLine("\"crtbegin.o\"");
-			Writer.WriteLine("\"crt2.o\"");
+			Console.WriteLine("Linking: " + _outFile);
+			var script = Path.Combine(_outDir, "Link.txt");
+			var writer = new StreamWriter(script, false, Encoding.GetEncoding("iso-8859-1"));
+			writer.WriteLine("INPUT(");
+			writer.WriteLine("\"crtbegin.o\"");
+			writer.WriteLine("\"crt2.o\"");
 
 			foreach (var e in ObjectFiles)
-				Writer.WriteLine("\"" + Path.GetFullPath(e) + "\"");
+				writer.WriteLine("\"" + Path.GetFullPath(e) + "\"");
 
 			foreach (var e in Archives)
-				Writer.WriteLine("\"" + Path.GetFullPath(e) + "\"");
+				writer.WriteLine("\"" + Path.GetFullPath(e) + "\"");
 
-			Writer.WriteLine("-lgdi32 -lwsock32 -lwinmm -ladvapi32 -lstdc++ -lmingwex -lmingw32 -lgcc -lmoldname");
-			Writer.WriteLine("-lmsvcrt -luser32 -lkernel32 -lshell32 -lcomctl32 -lcomdlg32 -lglu32 -lopengl32");
-			Writer.WriteLine("\"crtend.o\"");
-			Writer.WriteLine(")");
-			Writer.Flush();
-			Writer.Dispose();
+			writer.WriteLine("-lgdi32 -lwsock32 -lwinmm -ladvapi32 -lstdc++ -lmingwex -lmingw32 -lgcc -lmoldname");
+			writer.WriteLine("-lmsvcrt -luser32 -lkernel32 -lshell32 -lcomctl32 -lcomdlg32 -lglu32 -lopengl32");
+			writer.WriteLine("\"crtend.o\"");
+			writer.WriteLine(")");
+			writer.Flush();
+			writer.Dispose();
 
-			var ArchivePath = GetDirectory(ZinniaDirectory.Archives);
-			var Args = "-L" + ArchivePath + " -s -stack 4194304 -subsystem console --enable-stdcall-fixup";
-			Args += " -o \"" + OutFile + "\" \"" + Script + "\"";
+			var archivePath = GetDirectory(ZinniaDirectory.Archives);
+			var args = "-L" + archivePath + " -s -stack 4194304 -subsystem console --enable-stdcall-fixup";
+			args += " -o \"" + _outFile + "\" \"" + script + "\"";
 
-			if (!Run(Linker, Args))
+			if (!Run(_linker, args))
 			{
-				Console.WriteLine("Failed to link \"" + OutFile + "\"");
+				Console.WriteLine("Failed to link \"" + _outFile + "\"");
 				return false;
 			}
 
@@ -556,68 +555,79 @@ namespace Zinnia
 		}
 
 
-		public bool Archive()
+		private bool Archive()
 		{
-			Console.WriteLine("Archiving: " + OutFile);
+			Console.WriteLine("Archiving: " + _outFile);
 
-			var Args = "-c -r \"" + OutFile + "\"";
+			var args = "-c -r \"" + _outFile + "\"";
 			foreach (var e in ObjectFiles)
 			{
-				if (Args.Length + e.Length + 1 > 1000)
+				if (args.Length + e.Length + 1 > 1000)
 				{
-					if (!Run(Archiver, Args))
+					if (!Run(_archiver, args))
 					{
-						Console.WriteLine("Failed to archive " + OutFile);
+						Console.WriteLine("Failed to archive " + _outFile);
 						return false;
 					}
 
-					Args = "-c -r \"" + OutFile + "\"";
+					args = "-c -r \"" + _outFile + "\"";
 				}
 
-				Args += " \"" + e + "\"";
+				args += " \"" + e + "\"";
 			}
 
-			if (!Run(Archiver, Args))
+			if (!Run(_archiver, args))
 			{
-				Console.WriteLine("Failed to archive " + OutFile);
+				Console.WriteLine("Failed to archive " + _outFile);
 				return false;
 			}
 
 			return true;
 		}
 
-		public bool CreateOutput()
+		private bool CreateOutput()
 		{
 			if (Format != AssemblyFormat.Object)
 			{
-				if (File.Exists(OutFile))
-					File.Delete(OutFile);
+				if (File.Exists(_outFile))
+					File.Delete(_outFile);
 
-				if (Format == AssemblyFormat.Application)
-				{ if (!LinkApp()) return false; }
-				else if (Format == AssemblyFormat.Archive)
-				{ if (!Archive()) return false; }
-				else
-					throw new NotImplementedException();
+				switch (Format)
+				{
+					case AssemblyFormat.Application:
+					{
+						if (!LinkApp())
+							return false;
+						break;
+					}
+					case AssemblyFormat.Archive:
+					{
+						if (!Archive())
+							return false;
+						break;
+					}
+					default:
+						throw new NotImplementedException();
+				}
 			}
 
 			return true;
 		}
 
-		public bool Execute()
+		private bool Execute()
 		{
-			Console.WriteLine("Executing: " + Path.GetFileName(OutFile));
-			return Run(OutFile, "", FailIfAppFails: false);
+			Console.WriteLine("Executing: " + Path.GetFileName(_outFile));
+			return Run(_outFile, "", failIfAppFails: false);
 		}
 
-		public bool BuildAndRun(string[] Args)
+		public bool BuildAndRun(string[] args)
 		{
 			Reset();
-			Args = Args.ToArray();
-			if (!ProcessArgs(Args)) return false;
-			if (!Compile(Args)) return false;
+			args = args.ToArray();
+			if (!ProcessArgs(args)) return false;
+			if (!Compile(args)) return false;
 			if (!CreateOutput()) return false;
-			if (ExecuteApp) return Execute();
+			if (_executeApp) return Execute();
 			return true;
 		}
 	}

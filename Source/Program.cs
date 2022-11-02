@@ -4,20 +4,22 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Zinnia.Languages.Zinnia;
+using Zinnia.x86;
 
 namespace Zinnia
 {
-	public class Program
+	public static class Program
 	{
-		public const string PerfTestFile = @"..\..\..\..\Temp\Txt\FTest.zinnia";
+		private const string PerfTestFile = @"..\..\..\..\Temp\Txt\FTest.zinnia";
 
-		public static void MakePerfTestFile()
+		private static void MakePerfTestFile()
 		{
 			if (File.Exists(PerfTestFile))
 				File.Delete(PerfTestFile);
 
 			var sw = new StreamWriter(PerfTestFile);
-			var LineCount = 0;
+			var lineCount = 0;
 			var i = 0;
 
 			sw.WriteLine("using System");
@@ -29,7 +31,7 @@ namespace Zinnia
 			sw.WriteLine("void Main()");
 			sw.WriteLine();
 		
-			while (LineCount < 10000)
+			while (lineCount < 10000)
 			{
 				sw.WriteLine("public double CephesSin" + i + "(double x)");
 				sw.WriteLine("	if x == 0d: return 0d");
@@ -86,7 +88,7 @@ namespace Zinnia
 				sw.WriteLine("	return Result");
 				sw.WriteLine();
 		
-				LineCount += 52;
+				lineCount += 52;
 				i++;
 			}
 
@@ -96,67 +98,65 @@ namespace Zinnia
 		public static void PerfTest()
 		{
 			MakePerfTestFile();
-			var Arch = new x86.x86Architecture();
-			var Lang = new Languages.Zinnia.ZinniaLanguage();
-			var State = new CompilerState(null, Arch, Lang);
-			State.SetOutput(new MemoryStream(), new MemoryStream());
-			State.Entry = "Main";
-			State.Format = ImageFormat.MSCoff;
+			var arch = new x86Architecture();
+			var lang = new ZinniaLanguage();
+			var state = new CompilerState(null, arch, lang);
+			state.SetOutput(new MemoryStream(), new MemoryStream());
+			state.Entry = "Main";
+			state.Format = ImageFormat.MSCoff;
 
-			var Times = 10;
-			var Files = new[] { PerfTestFile };
-			var Lines = ZinniaBuilder.ReadLines(Files, State.TabSize);
-			var Assemblies = new List<AssemblyPath>()
+			var times = 10;
+			var files = new[] { PerfTestFile };
+			var lines = ZinniaBuilder.ReadLines(files, state.TabSize);
+			var assemblies = new List<AssemblyPath>
 			{
-				new AssemblyPath("ZinniaCore", true),
+				new("ZinniaCore", true)
 			};
 
 			Console.WriteLine("Start");
-			var Average = Environment.TickCount;
-			var Minimum = int.MaxValue;
-			for (var i = 0; i < Times; i++)
+			var average = Environment.TickCount;
+			var minimum = int.MaxValue;
+			for (var i = 0; i < times; i++)
 			{
-				var Ms = Environment.TickCount;
-				State.CodeOut.Seek(0, SeekOrigin.Begin);
-				State.LibOut.Seek(0, SeekOrigin.Begin);
+				var ms = Environment.TickCount;
+				state.CodeOut.Seek(0, SeekOrigin.Begin);
+				state.LibOut.Seek(0, SeekOrigin.Begin);
 
-				if (State.Compile(Lines, Assemblies))
+				if (state.Compile(lines, assemblies))
 				{
-					Console.WriteLine(i + ": " + State.Strings["CompilingSucceded"]);
+					Console.WriteLine(i + ": " + state.Strings["CompilingSucceded"]);
 				}
 				else
 				{
-					Console.WriteLine(i + ": " + State.Strings["CompilingFailed"]);
-					State.Messages.WriteToConsole();
+					Console.WriteLine(i + ": " + state.Strings["CompilingFailed"]);
+					state.Messages.WriteToConsole();
 					break;
 				}
 
-				Ms = Environment.TickCount - Ms;
-				if (Ms < Minimum) Minimum = Ms;
+				ms = Environment.TickCount - ms;
+				if (ms < minimum) minimum = ms;
 			}
 
-			Average = Environment.TickCount - Average;
-			Console.WriteLine("Minimum: {0}", Minimum);
-			Console.WriteLine("Average: {0}", Average / Times);
-			State.DisposeOutput();
+			average = Environment.TickCount - average;
+			Console.WriteLine("Minimum: {0}", minimum);
+			Console.WriteLine("Average: {0}", average / times);
+			state.DisposeOutput();
 		}
 
-		public static bool BuildAndRun(string[] Args)
-		{
-			var Builder = new ZinniaBuilder();
-			if (!Builder.BuildAndRun(Args)) return false;
-			return true;
-		}
+		private static bool BuildAndRun(string[] args) 
+			=> new ZinniaBuilder().BuildAndRun(args);
 
-		public static void Main(string[] Args)
+		public static void Main(string[] args)
 		{
 			//PerfTest();
 			//return;
 
 			for (var i = 0; i < 1; i++)
 			{
-				if (Args.Length > 1) BuildAndRun(Args);
-				else Console.WriteLine("No command line parameters");
+				if (args.Length > 1) 
+					BuildAndRun(args);
+				else 
+					Console.WriteLine("No command line parameters");
 			}
 		}
 	}
